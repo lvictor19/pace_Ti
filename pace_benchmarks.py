@@ -1,0 +1,449 @@
+import os
+import json
+import pandas as pd
+from pandas.plotting import  table
+from monty.json import MontyDecoder,MontyEncoder
+from sklearn.metrics import mean_absolute_error,mean_squared_error
+import numpy as np
+from tqdm import tqdm
+from matplotlib import pyplot as plt
+from matplotlib.ticker import MultipleLocator
+import scienceplots
+from scipy.optimize import curve_fit
+from uberplot import load_record,tabulize_record,in_plane_vectors,transform_energy_to_surface_energy,uber_fit,uber
+
+
+import json
+from monty.json import MontyDecoder,MontyEncoder
+from sklearn.metrics import mean_absolute_error,mean_squared_error
+
+filename=glob(r'*.json')[0]
+with open(filename) as f:
+    data_collection_=json.loads(f.read(),cls=MontyDecoder)
+data_collection=[]
+for data in data_collection_:
+    if data['metadata']['perturbation']!='pairs':
+        data_collection.append(data)
+del data_collection_
+
+ ######setup plotting#####
+colors=['black','dimgray','lightcoral','brown','red','orangered','chocolate',
+        'burlywood','orange','darkgoldenrod','gold','olive','darkolivegreen','chartreuse',
+        'green','turquoise','darkcyan','deepskyblue','dodgerblue','midnightblue','blue',
+        'blueviolet','violet','deeppink']
+index=np.array([0,4,8,12,16,20,1,5,9,13,17,21,2,6,10,14,18,22,3,7,11,15,19,23])
+colors_=[]
+for i in index:
+    colors_.append(colors[i])
+colors=colors_
+markers=['.','o','v','^','<','>','s','*','D','1','+','x',
+            '.','o','v','^','<','>','s','*','D','1','+','x']
+
+
+####### Vacancy formation energy #######
+########################################
+def Vacancy_formation(data_collection):
+    # input data
+    vacancy_id=[]
+    for i in np.arange(len(data_collection)):
+        if data_collection[i]['metadata']['perturbation']=="vacancies" and data_collection[i]['calc']=='final' and not data_collection[i]['metadata']['proto']=='casi-alth' and not data_collection[i]['metadata']['proto']=='mp-865373POSCAR':
+            vacancy_id.append(i)
+    vacancy_ideal_id=[]
+    for i in np.arange(len(data_collection)):
+        if data_collection[i]['metadata']['perturbation']=="vacancies_ideal" and data_collection[i]['calc']=='final':
+            vacancy_ideal_id.append(i)
+    protos=[]
+    protos_=[]
+    for id in vacancy_id:
+        protos.append(data_collection[id]['metadata']['proto']+'_'+str(data_collection[id]['metadata']['deleted_site'])+'|'+str(id))
+        protos_.append(data_collection[id]['metadata']['proto']+'_'+str(data_collection[id]['metadata']['deleted_site']))
+    protos_ideal={}
+    for id in vacancy_ideal_id:
+        protos_ideal[data_collection[id]['metadata']['proto']]=id
+    deltaEs=[]
+    deltaEs_pred=[]
+    for proto in list(protos):
+        delid=int(proto.split('|')[1])
+        idealid=protos_ideal[proto.split('_')[0]]
+        N_proto=len(data_collection[idealid]['structure'].species)
+        Eideal=data_collection[idealid]['energy']
+        Evac=data_collection[delid]['energy']
+        Eideal_pred=data_collection[idealid]['pace']['energy']
+        Evac_pred=data_collection[delid]['pace']['energy']   
+        deltaE=Evac-(N_proto-1)*Eideal/N_proto
+        deltaE_pred=Evac_pred-(N_proto-1)*Eideal_pred/N_proto
+        deltaEs.append(deltaE)
+        deltaEs_pred.append(deltaE_pred)
+    d={'Structure_site':protos_,r'$E^{DFT} (eV)$':np.round(np.array(deltaEs),5),r'$E^{pred} (eV)$':np.round(np.array(deltaEs_pred),5)}
+    df = pd.DataFrame(data=d)
+    from pandas.plotting import  table
+    fig = plt.figure(figsize=(5, 6))
+    ax = fig.add_subplot(111, frame_on=False)   
+    ax.xaxis.set_visible(False)  
+    ax.yaxis.set_visible(False) 
+    table(ax, df, loc='center')  
+    plt.savefig('Vacancy_formation_pace.png',dpi=200)
+    return
+
+#####get id for prototypes in GB,surface calculations#####
+def get_ref_id(data_collection):
+    ref_id={}
+    for i in np.arange(len(data_collection)):
+        if data_collection[i]['metadata']['perturbation']=="icsd" and data_collection[i]['calc']=='final' and 'proto' in data_collection[i]['metadata']['proto']:
+            if data_collection[i]['metadata']['proto'] in ['bcc.vasp','fcc.vasp','hcp.vasp','omega.vasp']:
+                ref_id[data_collection[i]['metadata']['proto']]=i
+    return ref_id
+
+#####save a picture of a table#####
+def savetable(table,name,dpi):
+    # input a dictionary of a table; the name and dpi of output picture
+    # output a picture of the table
+    df = pd.DataFrame(data=table)
+    fig = plt.figure(figsize=(5, 6))
+    ax = fig.add_subplot(111, frame_on=False) 
+    ax.xaxis.set_visible(False)  
+    ax.yaxis.set_visible(False)  
+    table(ax, df, loc='center')  
+    plt.savefig(name,dpi=dpi)
+
+####### Grain boudary #######
+#############################
+def Grain_boundary(data_collection):
+    protoids=get_ref_ids(data_collection)
+    gb_id=[]
+    for i in np.arange(len(data_collection)):
+        if data_collection[i]['metadata']['perturbation']=="gb" and data_collection[i]['calc']=='final':
+            gb_id.append(i)
+    icsd_id=[]
+    for i in np.arange(len(data_collection)):
+        if data_collection[i]['metadata']['perturbation']=="icsd" and data_collection[i]['calc']=='final':
+            icsd_id.append(i)
+    deltaEs_gb=[]
+    deltaEspred_gb=[]
+    protos=[]
+    for id in gb_id:
+        protoid=0
+        if data_collection[id]['metadata']['ref_elem']=='Mo':
+            protoid=protoids['bcc.vasp']
+            protos.append('bcc')
+        if data_collection[id]['metadata']['ref_elem']=='Ti':
+            protoid=protoids['hcp.vasp']
+            protos.append('hcp')
+        N_gb=len(data_collection[id]['structure'].species)
+        M_icsd=len(data_collection[protoid]['structure'].species)
+        E_gb=data_collection[id]['energy']
+        E_gb_pred=data_collection[id]['pace']['energy']
+        E_icsd=data_collection[protoid]['energy']
+        lattice=data_collection[id]['structure'].lattice.matrix
+        A=np.linalg.norm(np.cross(lattice[0,:],lattice[1,:]))
+        deltaE_gb=(E_gb-E_icsd*N_gb/M_icsd)/2/A
+        deltaEpred_gb=(E_gb_pred-E_icsd*N_gb/M_icsd)/2/A
+        deltaEs_gb.append(deltaE_gb)
+        deltaEspred_gb.append(deltaEpred_gb)
+    planes=[data_collection[gb_id[i]]['metadata']['plane'] for i in np.arange(8)]
+    sigmas=[data_collection[gb_id[i]]['metadata']['sigma'] for i in np.arange(8)]
+    d={'proto':protos,'plane':planes,'sigma':sigmas,r'$E^{DFT}(eV/Å^{2})$':np.round(np.array(deltaEs_gb),5),r'$E^{pred}(eV/Å^{2})$':np.round(np.array(deltaEspred_gb),5)}
+    savetable(d,'Grain_boundary_pace.png',200)
+
+####### Surface #######
+#######################
+def Surface(data_collection):
+    surface_id=[]
+    for i in np.arange(len(data_collection)):
+        if data_collection[i]['metadata']['perturbation']=="surfaces" and data_collection[i]['calc']=='final':
+            surface_id.append(i)
+    icsd_id=[]
+    for i in np.arange(len(data_collection)):
+        if data_collection[i]['metadata']['perturbation']=="icsd" and data_collection[i]['calc']=='final':# and data_collection[i]['metadata']['proto']=='bcc.vasp' or data_collection[i]['metadata']['proto']=='hcp.vasp':
+            icsd_id.append(i)
+    protoids=get_ref_id(data_collection)
+    deltaEs_sf=[]
+    deltaEspred_sf=[]
+    for id in surface_id:
+        protoid=protoids[data_collection[id]['metadata']['proto']]
+        N_sf=len(data_collection[id]['structure'].species)
+        M_icsd=len(data_collection[protoid]['structure'].species)
+        E_sf=data_collection[id]['energy']
+        E_sf_pred=data_collection[id]['pace']['energy']
+        E_icsd=data_collection[protoid]['energy']
+        lattice=data_collection[id]['structure'].lattice.matrix
+        A=np.linalg.norm(np.cross(lattice[0,:],lattice[1,:]))
+        deltaE_sf=(E_sf-E_icsd*N_sf/M_icsd)/2/A
+        deltaEpred_sf=(E_sf_pred-E_icsd*N_sf/M_icsd)/2/A
+        deltaEs_sf.append(deltaE_sf)
+        deltaEspred_sf.append(deltaEpred_sf)
+    protos=[data_collection[id]['metadata']['proto'].split('.')[0] for id in surface_id]
+    planes=[data_collection[id]['metadata']['miller'] for id in surface_id]
+    d={'proto':protos,'plane':planes,r'$E^{DFT}(eV/Å^{2})$':np.round(np.array(deltaEs_sf),5),r'$E^{pred}(eV/Å^{2})$':np.round(np.array(deltaEspred_sf),5)}
+    savetable(d,'Surfaces_pace.png',200)
+
+
+####### Strain #######
+######################
+def Strain(data_collection):
+    strain_id=[]
+    for i in np.arange(len(data_collection)):
+        if data_collection[i]['metadata']['perturbation']=="strain" and data_collection[i]['calc']=='final':
+            strain_id.append(i)
+
+    protos=set()
+    for id in strain_id:
+        protos.add(data_collection[id]['metadata']['proto'])
+    protos=list(protos)
+    for proto in protos:
+        strain_id=[]
+        for i in np.arange(len(data_collection)):
+            if data_collection[i]['metadata']['perturbation']=="strain" and data_collection[i]['calc']=='final' and data_collection[i]['metadata']['proto']==proto:
+                strain_id.append(i)
+        Es=np.zeros((len(strain_id),6))
+        i=0
+        for id in strain_id:
+            Es[i]=np.array(data_collection[id]['metadata']['special_direction'])
+            i+=1
+        groups=[]
+        already=np.zeros(len(Es))
+        isidentical=abs(np.dot(Es,Es.T)-1)<1e-12
+        for i in np.arange(len(Es)):
+            if not already[i]==1:
+                thisgroup=np.where(isidentical[i]==True)
+                groups.append(thisgroup[0].tolist())
+                already[thisgroup]=1
+        i=0
+        with plt.style.context('science'):
+            plt.figure() 
+            for group in groups:
+                magnitudes=[]
+                Energies=[]
+                Energies_pred=[]
+                for groupid in group:
+                    Natom=len(data_collection[strain_id[groupid]]['structure'].species)
+                    magnitudes.append(data_collection[strain_id[groupid]]['metadata']['magnitude'])
+                    Energies.append(data_collection[strain_id[groupid]]['energy']/Natom)
+                    Energies_pred.append(data_collection[strain_id[groupid]]['pace']['energy']/Natom)
+                magnitudes=np.array(magnitudes)
+                Energies=np.array(Energies)
+                Energies_pred=np.array(Energies_pred)
+                order=magnitudes.argsort()
+                plt.scatter(magnitudes[order],Energies[order]-bd,c=colors[i],marker=markers[i],s=2,label=np.round(data_collection[strain_id[group[0]]]['metadata']['special_direction'],4))
+                plt.plot(magnitudes[order],Energies_pred[order]-bp,c=colors[i])
+                plt.legend(bbox_to_anchor=(0.5, -0.05))
+                i+=1
+            plt.savefig("Strains_"+proto+"_pace.png",dpi=200)
+            plt.close() 
+
+
+#####plot surface heatmap#####
+def plot_surface_heatmap(ax,X,Y,Z):
+    pc=ax.pcolormesh(X, Y, Z)
+    ax.set_aspect('equal')
+    im_ratio=(max(Y.ravel())-min(Y.ravel()))/(max(X.ravel())-min(X.ravel()))
+    cbar=plt.colorbar(pc,ax=ax,fraction=0.047*im_ratio,pad=0.04)
+    return ax,cbar
+
+####### Generalized stacking fault energy #######
+################ without uberfit ################
+def Gsfe_withoutUber(data_collection):
+    faces=['bcc100','bcc110','fcc100','fcc111','basal','prismatic','pyramidal']
+    protos=['bcc','bcc','fcc','fcc','hcp','hcp','hcp']
+    planes=['100','110','100','111','basal','prismatic','pyramidal']
+    for whichface in np.arange(7):
+        face=faces[whichface]
+        with open(face+"record.json") as f:
+            record=json.loads(f.read())
+        equivalents=[]
+        for equi1 in record['equivalents']:
+            equi_orbit=[]
+            for equi2 in equi1:
+                if equi2.endswith('0.000000'):
+                    a,b,c=equi2.split(':')
+                    equi_orbit.append(a+'.'+b)
+                    # print(equi_orbit)
+            if not equi_orbit==[]:
+                equivalents.append(equi_orbit)
+
+        values=np.zeros((13,13),dtype=float)
+        for i in np.arange(len(equivalents)):
+            first=equivalents[i][0]
+            eqe=0
+            for data in data_collection:
+                if data['calc']=='final' and data['metadata']['perturbation']=='gsfe' and data['metadata']['proto']==protos[whichface] and data['metadata']['plane']==planes[whichface] and data['metadata']['shift0']==0 and data['metadata']['shift1']==0 and data['metadata']['cleavage']==0:
+                    eqe=data['pace']['energy']
+            value=0
+            for data in data_collection:
+                if data['calc']=='final' and data['metadata']['perturbation']=='gsfe' and data['metadata']['proto']==protos[whichface] and data['metadata']['plane']==planes[whichface] and data['metadata']['shift0']==int(first.split('.')[0]) and data['metadata']['shift1']==int(first.split('.')[1]) and data['metadata']['cleavage']==0:
+                    value=data['pace']['energy']
+   
+            for j in np.arange(len(equivalents[i])):
+                which=equivalents[i][j].split('.')
+                values[int(which[0]),int(which[1])]=value
+        values[12,:]=values[0,:]
+        values[:,12]=values[:,0]
+        values=(values-values[0,0])*1000
+
+        def plot_surface_heatmap(ax,X,Y,Z):
+            pc=ax.pcolormesh(X, Y, Z)
+            ax.set_aspect('equal')
+            im_ratio=(max(Y.ravel())-min(Y.ravel()))/(max(X.ravel())-min(X.ravel()))
+            cbar=plt.colorbar(pc,ax=ax,fraction=0.047*im_ratio,pad=0.04)
+
+            return ax,cbar
+        values=(values-values[0,0])*1000
+
+        fig=plt.figure()
+        ax=fig.add_subplot(111)
+        x=np.arange(0,1+1e-7,1/12)
+        y=np.arange(0,1+1e-7,1/12)
+        X,Y=np.meshgrid(x,y)
+        ax,cbar=plot_surface_heatmap(ax,X,Y,values)
+        plt.tight_layout()
+        plt.savefig('2d_'+faces[whichface]+'.png')
+        plt.close()
+
+#####modified functions from uber.py#####
+def shift_energies_to_surface_energy(unwinded,eqe):
+    gamma=surface_energy(unwinded,eqe)
+    unwinded["energy"]-=(2*gamma+eqe)
+    return unwinded
+
+def surface_energy(unwinded,eqe):
+    maxcleave = max(unwinded["cleavage"])
+
+    surface_energies = (unwinded.loc[unwinded["cleavage"] ==
+                                    maxcleave]["energy"] - eqe)*0.5
+    if max(surface_energies)-min(surface_energies)>0.001:
+        raise ValueError("Surface energies don't match at different shifts. Did you separate enough?")
+
+    return np.mean(surface_energies)
+
+####### Generalized stacking fault energy #######
+################ with uberfit ###################
+def gmsf(data_collection)
+    faces=['bcc100','bcc110','fcc100','fcc111','basal','prismatic','pyramidal']
+    protos=['bcc','bcc','fcc','fcc','hcp','hcp','hcp']
+    planes=['100','110','100','111','basal','prismatic','pyramidal']
+    for whichface in np.arange(7):
+        face=faces[whichface]
+        with open(face+"record.json") as f:
+            record=json.loads(f.read())
+        equivalents=[]
+        for equi1 in record['equivalents']:
+            equi_orbit=[]
+            for equi2 in equi1:
+                if equi2.endswith('0.000000'):
+                    a,b,c=equi2.split(':')
+                    equi_orbit.append(a+'.'+b)
+                    # print(equi_orbit)
+            if not equi_orbit==[]:
+                equivalents.append(equi_orbit)
+
+        values=np.zeros((13,13),dtype=float)
+        for i in np.arange(len(equivalents)):
+            first=equivalents[i][0]
+            eqe=0
+            for data in data_collection:
+                if data['calc']=='final' and data['metadata']['perturbation']=='gsfe' and data['metadata']['proto']==protos[whichface] and data['metadata']['plane']==planes[whichface] and data['metadata']['shift0']==0 and data['metadata']['shift1']==0 and data['metadata']['cleavage']==0:
+                    eqe=data['pace']['energy']
+            cleaves=[]
+            cleave_energies=[]
+            for data in data_collection:
+                if data['calc']=='final' and data['metadata']['perturbation']=='gsfe' and data['metadata']['proto']==protos[whichface] and data['metadata']['plane']==planes[whichface] and data['metadata']['shift0']==int(first.split('.')[0]) and data['metadata']['shift1']==int(first.split('.')[1]):
+                    cleaves.append(data['metadata']['cleavage'])
+                    cleave_energies.append(data['pace']['energy'])
+            value=0
+            cleaves=np.array(cleaves)
+            cleave_energies=np.array(cleave_energies)
+            index=np.argsort(cleaves)
+            energies=cleave_energies[index]
+            record=load_record('./'+faces[whichface]+"_cleave_record.json")
+            unwinded=tabulize_record(record)
+            avec,bvec=in_plane_vectors(record)
+            unwinded["energy"]=energies
+            unwinded_slice=shift_energies_to_surface_energy(unwinded,eqe)
+            popt, pcov = uber_fit(unwinded_slice)
+            value=-2*popt[1]+popt[3]
+            for j in np.arange(len(equivalents[i])):
+                which=equivalents[i][j].split('.')
+                values[int(which[0]),int(which[1])]=value
+        values[12,:]=values[0,:]
+        values[:,12]=values[:,0]
+        values=(values-values[0,0])*1000
+
+        def plot_surface_heatmap(ax,X,Y,Z):
+            pc=ax.pcolormesh(X, Y, Z)
+            ax.set_aspect('equal')
+            im_ratio=(max(Y.ravel())-min(Y.ravel()))/(max(X.ravel())-min(X.ravel()))
+            cbar=plt.colorbar(pc,ax=ax,fraction=0.047*im_ratio,pad=0.04)
+
+            return ax,cbar
+        values=(values-values[0,0])*1000
+
+        fig=plt.figure()
+        ax=fig.add_subplot(111)
+        x=np.arange(0,1+1e-7,1/12)
+        y=np.arange(0,1+1e-7,1/12)
+        X,Y=np.meshgrid(x,y)
+        ax,cbar=plot_surface_heatmap(ax,X,Y,values)
+        plt.tight_layout()
+        plt.savefig('2d_'+faces[whichface]+'.png')
+        plt.close()
+
+
+def main():
+    ######get reference energies#####
+    bd=0
+    for data in data_collection:
+        if data['metadata']['perturbation']=='icsd' and data['calc']=='final' and data['metadata']['proto']=='omega.vasp':
+            bp=data['energy']
+    bd=bd/3
+
+    bp=0
+    for data in data_collection:
+        if data['metadata']['perturbation']=='icsd' and data['calc']=='final' and data['metadata']['proto']=='omega.vasp':
+            bp=data['pace']['energy']
+    bp=bp/3
+    
+    #####evaluate energy and force prediction#####
+    energies_dft=np.zeros(len(data_collection))
+    forces_dft=[]
+    energies_pace=np.zeros(len(data_collection))
+    forces_pace=[]
+    for i in tqdm(np.arange(len(data_collection))):
+        atom_num=len(data_collection[i]['structure'].species)
+        energies_dft[i]=data_collection[i]['energy']/atom_num-bd
+        forces_dft+=data_collection[i]['forces']
+        energies_pace[i]=data_collection[i]['pace']['energy']/atom_num-bp
+        forces_pace+=data_collection[i]['pace']['forces'].tolist()
+
+    with plt.style.context('science'):
+        plt.figure()
+        plt.scatter(energies_dft,energies_pace,c='r',s=0.3)
+        plt.legend()
+        plt.xlabel(r"$\Delta E^{DFT} \enspace (eV/atom)$")
+        plt.ylabel(r"$\Delta E^{pred} \enspace (eV/atom)$")
+        plt.xlim([0,6])
+        plt.ylim([0,6])
+        plt.savefig("pace_energy.png",dpi=200)
+        plt.close()
+    RMSE_E=np.sqrt(mean_squared_error(energies_dft,energies_pace))
+    MAE_E=mean_absolute_error(energies_dft,energies_pace)
+
+    forces_sca_dft=np.sqrt(np.sum(np.array(forces_dft)**2,axis=1))
+    forces_sca_pace=np.sqrt(np.sum(np.array(forces_pace)**2,axis=1))
+
+    with plt.style.context('science'):
+        plt.figure()
+        plt.scatter(forces_sca_dft,forces_sca_pace,c='r',s=0.3,label='pace')
+        plt.xlabel(r"$|F^{i}|^{DFT} \enspace (eV/Å)$")
+        plt.ylabel(r"$|F^{i}|^{pred} \enspace (eV/Å)$")
+        plt.savefig("pace_force.png",dpi=200)
+        plt.close()
+
+    RMSE_F=np.sqrt(mean_squared_error(forces_sca_dft,forces_sca_pace))
+    MAE_F=mean_absolute_error(forces_sca_dft,forces_sca_pace)
+    Vacancy_formation(data_collection)
+    Grain_boundary(data_collection)
+    Strain(data_collection)
+    Gsfe_withoutUber(data_collection)
+
+if __name__ == "__main__":
+    main()
