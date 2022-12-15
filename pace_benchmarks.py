@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os
 import json
 import pandas as pd
@@ -7,8 +9,8 @@ from sklearn.metrics import mean_absolute_error,mean_squared_error
 import numpy as np
 from tqdm import tqdm
 from matplotlib import pyplot as plt
-from matplotlib.ticker import MultipleLocator
 import scienceplots
+from matplotlib.ticker import MultipleLocator
 from scipy.optimize import curve_fit
 from uberplot import load_record,tabulize_record,in_plane_vectors,transform_energy_to_surface_energy,uber_fit,uber
 
@@ -16,15 +18,6 @@ from uberplot import load_record,tabulize_record,in_plane_vectors,transform_ener
 import json
 from monty.json import MontyDecoder,MontyEncoder
 from sklearn.metrics import mean_absolute_error,mean_squared_error
-
-filename=glob(r'*.json')[0]
-with open(filename) as f:
-    data_collection_=json.loads(f.read(),cls=MontyDecoder)
-data_collection=[]
-for data in data_collection_:
-    if data['metadata']['perturbation']!='pairs':
-        data_collection.append(data)
-del data_collection_
 
  ######setup plotting#####
 colors=['black','dimgray','lightcoral','brown','red','orangered','chocolate',
@@ -40,10 +33,48 @@ markers=['.','o','v','^','<','>','s','*','D','1','+','x',
             '.','o','v','^','<','>','s','*','D','1','+','x']
 
 
+#####save a picture of a table#####
+def savetable(data,name,dpi):
+    '''
+    input a dictionary of a table; the name and dpi of output picture
+    output a picture of the table
+    '''
+    df = pd.DataFrame(data=data)
+    fig = plt.figure(figsize=(5, 6))
+    ax = fig.add_subplot(111, frame_on=False) 
+    ax.xaxis.set_visible(False)  
+    ax.yaxis.set_visible(False)  
+    table(ax, df, loc='center')  
+    plt.savefig(name,dpi=dpi)
+
+#####get id for prototypes in GB,surface calculations#####
+def get_ref_id(data_collection:list):
+    '''
+        get the ids for prototypes bcc, fcc, hcp, omega
+    '''
+    ref_id={}
+    for i in np.arange(len(data_collection)):
+        if data_collection[i]['metadata']['perturbation']=="icsd" and data_collection[i]['calc']=='final' and 'proto' in data_collection[i]['metadata']:
+            if data_collection[i]['metadata']['proto'] in ['bcc.vasp','fcc.vasp','hcp.vasp','omega.vasp']:
+                ref_id[data_collection[i]['metadata']['proto']]=i
+    return ref_id
+
+#####plot surface heatmap#####
+def plot_surface_heatmap(ax,X,Y,Z):
+    pc=ax.pcolormesh(X, Y, Z)
+    ax.set_aspect('equal')
+    im_ratio=(max(Y.ravel())-min(Y.ravel()))/(max(X.ravel())-min(X.ravel()))
+    cbar=plt.colorbar(pc,ax=ax,fraction=0.047*im_ratio,pad=0.04)
+    return ax,cbar
+
 ####### Vacancy formation energy #######
 ########################################
-def Vacancy_formation(data_collection):
-    # input data
+def Vacancy_formation(data_collection:list):
+    '''
+    Vacancy formation energy analysis
+    input data_collection::list
+    output a picture of the table of the vacancy formation energies
+    '''
     vacancy_id=[]
     for i in np.arange(len(data_collection)):
         if data_collection[i]['metadata']['perturbation']=="vacancies" and data_collection[i]['calc']=='final' and not data_collection[i]['metadata']['proto']=='casi-alth' and not data_collection[i]['metadata']['proto']=='mp-865373POSCAR':
@@ -75,41 +106,21 @@ def Vacancy_formation(data_collection):
         deltaEs.append(deltaE)
         deltaEs_pred.append(deltaE_pred)
     d={'Structure_site':protos_,r'$E^{DFT} (eV)$':np.round(np.array(deltaEs),5),r'$E^{pred} (eV)$':np.round(np.array(deltaEs_pred),5)}
-    df = pd.DataFrame(data=d)
-    from pandas.plotting import  table
-    fig = plt.figure(figsize=(5, 6))
-    ax = fig.add_subplot(111, frame_on=False)   
-    ax.xaxis.set_visible(False)  
-    ax.yaxis.set_visible(False) 
-    table(ax, df, loc='center')  
-    plt.savefig('Vacancy_formation_pace.png',dpi=200)
+    savetable(d,'Vacancy_formation_pace.png',dpi=200)
     return
 
-#####get id for prototypes in GB,surface calculations#####
-def get_ref_id(data_collection):
-    ref_id={}
-    for i in np.arange(len(data_collection)):
-        if data_collection[i]['metadata']['perturbation']=="icsd" and data_collection[i]['calc']=='final' and 'proto' in data_collection[i]['metadata']['proto']:
-            if data_collection[i]['metadata']['proto'] in ['bcc.vasp','fcc.vasp','hcp.vasp','omega.vasp']:
-                ref_id[data_collection[i]['metadata']['proto']]=i
-    return ref_id
 
-#####save a picture of a table#####
-def savetable(table,name,dpi):
-    # input a dictionary of a table; the name and dpi of output picture
-    # output a picture of the table
-    df = pd.DataFrame(data=table)
-    fig = plt.figure(figsize=(5, 6))
-    ax = fig.add_subplot(111, frame_on=False) 
-    ax.xaxis.set_visible(False)  
-    ax.yaxis.set_visible(False)  
-    table(ax, df, loc='center')  
-    plt.savefig(name,dpi=dpi)
 
 ####### Grain boudary #######
 #############################
-def Grain_boundary(data_collection):
-    protoids=get_ref_ids(data_collection)
+def Grain_boundary(data_collection:list):
+    '''
+    Grain boundary energy analysis
+    input data_collection::list
+    output a picture of the table of the grain boundary energies
+    '''
+    protoids=get_ref_id(data_collection)
+    print(protoids)
     gb_id=[]
     for i in np.arange(len(data_collection)):
         if data_collection[i]['metadata']['perturbation']=="gb" and data_collection[i]['calc']=='final':
@@ -147,7 +158,12 @@ def Grain_boundary(data_collection):
 
 ####### Surface #######
 #######################
-def Surface(data_collection):
+def Surface(data_collection:list):
+    '''
+    Surface boundary energy analysis
+    input data_collection::list
+    output a picture of the table of the surface energies
+    '''
     surface_id=[]
     for i in np.arange(len(data_collection)):
         if data_collection[i]['metadata']['perturbation']=="surfaces" and data_collection[i]['calc']=='final':
@@ -180,7 +196,15 @@ def Surface(data_collection):
 
 ####### Strain #######
 ######################
-def Strain(data_collection):
+def Strain(data_collection:list,ref_omega_dft:float,ref_omega_pace):
+    '''
+    Strain-Energy relations
+    input 
+        data_collection::list   
+        ref_omega_dft::float   reference energy (per atom) for omega structure from dft calculation
+        ref_omega_pace::float  reference energy (per atom) for omega structure from pace potential
+    output pictures of the Energy-Strain curves (a picture contains different strain directions for the same prototype)
+    '''
     strain_id=[]
     for i in np.arange(len(data_collection)):
         if data_collection[i]['metadata']['perturbation']=="strain" and data_collection[i]['calc']=='final':
@@ -224,25 +248,23 @@ def Strain(data_collection):
                 Energies=np.array(Energies)
                 Energies_pred=np.array(Energies_pred)
                 order=magnitudes.argsort()
-                plt.scatter(magnitudes[order],Energies[order]-bd,c=colors[i],marker=markers[i],s=2,label=np.round(data_collection[strain_id[group[0]]]['metadata']['special_direction'],4))
-                plt.plot(magnitudes[order],Energies_pred[order]-bp,c=colors[i])
+                plt.scatter(magnitudes[order],Energies[order]-ref_omega_dft,c=colors[i],marker=markers[i],s=2,label=np.round(data_collection[strain_id[group[0]]]['metadata']['special_direction'],4))
+                plt.plot(magnitudes[order],Energies_pred[order]-ref_omega_pace,c=colors[i])
                 plt.legend(bbox_to_anchor=(0.5, -0.05))
                 i+=1
             plt.savefig("Strains_"+proto+"_pace.png",dpi=200)
             plt.close() 
 
 
-#####plot surface heatmap#####
-def plot_surface_heatmap(ax,X,Y,Z):
-    pc=ax.pcolormesh(X, Y, Z)
-    ax.set_aspect('equal')
-    im_ratio=(max(Y.ravel())-min(Y.ravel()))/(max(X.ravel())-min(X.ravel()))
-    cbar=plt.colorbar(pc,ax=ax,fraction=0.047*im_ratio,pad=0.04)
-    return ax,cbar
 
 ####### Generalized stacking fault energy #######
 ################ without uberfit ################
-def Gsfe_withoutUber(data_collection):
+def Gsfe_withoutUber(data_collection:list):
+    '''
+    Generalized stacking fault energy analysis without UBER fittting
+    input data_collection::list   
+    output pictures of the gamma-surfaces
+    ''' 
     faces=['bcc100','bcc110','fcc100','fcc111','basal','prismatic','pyramidal']
     protos=['bcc','bcc','fcc','fcc','hcp','hcp','hcp']
     planes=['100','110','100','111','basal','prismatic','pyramidal']
@@ -317,7 +339,12 @@ def surface_energy(unwinded,eqe):
 
 ####### Generalized stacking fault energy #######
 ################ with uberfit ###################
-def gmsf(data_collection)
+def gmsf(data_collection):
+    '''
+    Generalized stacking fault energy analysis with UBER fittting
+    input data_collection::list   
+    output pictures of the gamma-surfaces
+    ''' 
     faces=['bcc100','bcc110','fcc100','fcc111','basal','prismatic','pyramidal']
     protos=['bcc','bcc','fcc','fcc','hcp','hcp','hcp']
     planes=['100','110','100','111','basal','prismatic','pyramidal']
@@ -389,18 +416,28 @@ def gmsf(data_collection)
 
 
 def main():
-    ######get reference energies#####
-    bd=0
-    for data in data_collection:
-        if data['metadata']['perturbation']=='icsd' and data['calc']=='final' and data['metadata']['proto']=='omega.vasp':
-            bp=data['energy']
-    bd=bd/3
+    # filename=glob(r'*.json')[0]
+    filename='Ti_data_pace.json'
+    with open(filename) as f:
+        data_collection_=json.loads(f.read(),cls=MontyDecoder)
+    data_collection=[]
+    for data in data_collection_:
+        if data['metadata']['perturbation']!='pairs':
+            data_collection.append(data)
+    del data_collection_
 
-    bp=0
+    ######get reference energies#####
+    ref_omega_dft=0
     for data in data_collection:
         if data['metadata']['perturbation']=='icsd' and data['calc']=='final' and data['metadata']['proto']=='omega.vasp':
-            bp=data['pace']['energy']
-    bp=bp/3
+            ref_omega_pace=data['energy']
+    ref_omega_dft=ref_omega_dft/3
+
+    ref_omega_pace=0
+    for data in data_collection:
+        if data['metadata']['perturbation']=='icsd' and data['calc']=='final' and data['metadata']['proto']=='omega.vasp':
+            ref_omega_pace=data['pace']['energy']
+    ref_omega_pace=ref_omega_pace/3
     
     #####evaluate energy and force prediction#####
     energies_dft=np.zeros(len(data_collection))
@@ -409,9 +446,9 @@ def main():
     forces_pace=[]
     for i in tqdm(np.arange(len(data_collection))):
         atom_num=len(data_collection[i]['structure'].species)
-        energies_dft[i]=data_collection[i]['energy']/atom_num-bd
+        energies_dft[i]=data_collection[i]['energy']/atom_num-ref_omega_dft
         forces_dft+=data_collection[i]['forces']
-        energies_pace[i]=data_collection[i]['pace']['energy']/atom_num-bp
+        energies_pace[i]=data_collection[i]['pace']['energy']/atom_num-ref_omega_pace
         forces_pace+=data_collection[i]['pace']['forces'].tolist()
 
     with plt.style.context('science'):
@@ -442,7 +479,7 @@ def main():
     MAE_F=mean_absolute_error(forces_sca_dft,forces_sca_pace)
     Vacancy_formation(data_collection)
     Grain_boundary(data_collection)
-    Strain(data_collection)
+    Strain(data_collection,ref_omega_dft,ref_omega_pace)
     Gsfe_withoutUber(data_collection)
 
 if __name__ == "__main__":
