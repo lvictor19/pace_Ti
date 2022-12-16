@@ -265,10 +265,11 @@ def Grain_boundary(data_collection: list):
         E_gb = data_collection[id]["energy"]
         E_gb_pred = data_collection[id]["pace"]["energy"]
         E_icsd = data_collection[protoid]["energy"]
+        E_icsd_pred = data_collection[protoid]["pace"]["energy"]
         lattice = data_collection[id]["structure"].lattice.matrix
         A = np.linalg.norm(np.cross(lattice[0, :], lattice[1, :]))
         deltaE_gb = (E_gb - E_icsd * N_gb / M_icsd) / 2 / A
-        deltaEpred_gb = (E_gb_pred - E_icsd * N_gb / M_icsd) / 2 / A
+        deltaEpred_gb = (E_gb_pred - E_icsd_pred * N_gb / M_icsd) / 2 / A
         deltaEs_gb.append(deltaE_gb)
         deltaEspred_gb.append(deltaEpred_gb)
     planes = [data_collection[gb_id[i]]["metadata"]["plane"] for i in np.arange(8)]
@@ -315,10 +316,11 @@ def Surface(data_collection: list):
         E_sf = data_collection[id]["energy"]
         E_sf_pred = data_collection[id]["pace"]["energy"]
         E_icsd = data_collection[protoid]["energy"]
+        E_icsd_pred = data_collection[protoid]["pace"]["energy"]
         lattice = data_collection[id]["structure"].lattice.matrix
         A = np.linalg.norm(np.cross(lattice[0, :], lattice[1, :]))
         deltaE_sf = (E_sf - E_icsd * N_sf / M_icsd) / 2 / A
-        deltaEpred_sf = (E_sf_pred - E_icsd * N_sf / M_icsd) / 2 / A
+        deltaEpred_sf = (E_sf_pred - E_icsd_pred * N_sf / M_icsd) / 2 / A
         deltaEs_sf.append(deltaE_sf)
         deltaEspred_sf.append(deltaEpred_sf)
     protos = [
@@ -694,7 +696,7 @@ def Burgers_Bains(data_collection: list):
         plt.close()
 
 
-def bcc_omega(data_collection: list):
+def bcc_omega(data_collection: list, ref_omega_pace: float):
     """
     analysis for the pathway connecting bcc and omega
     """
@@ -720,8 +722,8 @@ def bcc_omega(data_collection: list):
     Energies = Energies[index]
     with plt.style.context("science"):
         plt.figure()
-        plt.plot(np.arange(len(Energies)), Energies - bp, c="black")
-        plt.scatter(np.arange(len(Energies)), Energies - bp, c="black", s=4)
+        plt.plot(np.arange(len(Energies)), Energies - ref_omega_pace, c="black")
+        plt.scatter(np.arange(len(Energies)), Energies - ref_omega_pace, c="black", s=4)
 
         plt.xlabel("Omega Transformation")
         plt.xticks([])
@@ -774,9 +776,12 @@ def hcp_omega(data_collection: list):
     pathways = list(pathways)
 
     for pathway in pathways:
-        energies = np.zeros(7)
-        energies[0] = omega_energy
-        energies[6] = hcp_energy
+        energies_dft = np.zeros(7)
+        energies_dft[0] = omega_energy_dft
+        energies_dft[6] = hcp_energy_dft
+        energies_pace = np.zeros(7)
+        energies_pace[0] = omega_energy_pace
+        energies_pace[6] = hcp_energy_pace
         for image in np.arange(1, 6, 1):
             for i in np.arange(len(data_collection)):
                 if (
@@ -786,17 +791,27 @@ def hcp_omega(data_collection: list):
                     and data_collection[i]["metadata"]["#pathway"] == pathway
                     and int(data_collection[i]["metadata"]["image"]) == image
                 ):
-                    energies[image] = data_collection[i]["pace"]["energy"]
-        energies = energies - energies[0]
+                    energies_pace[image] = data_collection[i]["pace"]["energy"] / len(
+                        data_collection[i]["structure"]
+                    )
+                    energies_dft[image] = data_collection[i]["energy"] / len(
+                        data_collection[i]["structure"]
+                    )
+        energies_dft = energies_dft - energies_dft[0]
+        energies_pace = energies_pace - energies_pace[0]
         with plt.style.context("science"):
             plt.figure()
-            plt.plot(np.arange(7), energies)
+            plt.scatter(np.arange(7), energies_dft)
+            plt.plot(np.arange(7), energies_pace)
             plt.savefig(str(pathway) + "_NEB.png")
             plt.close()
 
-        energies = np.zeros(7)
-        energies[0] = omega_energy
-        energies[6] = hcp_energy
+        energies_dft = np.zeros(7)
+        energies_dft[0] = omega_energy_dft
+        energies_dft[6] = hcp_energy_dft
+        energies_pace = np.zeros(7)
+        energies_pace[0] = omega_energy_pace
+        energies_pace[6] = hcp_energy_pace
         for image in np.arange(1, 6, 1):
             for i in np.arange(len(data_collection)):
                 if (
@@ -806,16 +821,25 @@ def hcp_omega(data_collection: list):
                     and data_collection[i]["metadata"]["#pathway"] == pathway
                     and int(data_collection[i]["metadata"]["image"]) == image
                 ):
-                    energies[image - 1] = data_collection[i]["pace"]["energy"]
-        energies = energies - energies[0]
+                    energies_pace[image] = data_collection[i]["pace"]["energy"] / len(
+                        data_collection[i]["structure"]
+                    )
+                    energies_dft[image] = data_collection[i]["energy"] / len(
+                        data_collection[i]["structure"]
+                    )
+        energies_dft = energies_dft - energies_dft[0]
+        energies_pace = energies_pace - energies_pace[0]
         with plt.style.context("science"):
             plt.figure()
-            plt.plot(np.arange(7), energies)
+            plt.scatter(np.arange(7), energies_dft)
+            plt.plot(np.arange(7), energies_pace)
             plt.savefig(str(pathway) + "_static.png")
             plt.close()
 
 
-def collect_in_powerpoint(RMSE_E: float, MAE_E: float, RMSE_F: float, MAE_F: float):
+def collect_in_powerpoint(
+    data_collection, RMSE_E: float, MAE_E: float, RMSE_F: float, MAE_F: float
+):
     """
     collect things in a powerpoint file
     input   RMSE_E::float Energy RMSE error
@@ -895,6 +919,16 @@ def collect_in_powerpoint(RMSE_E: float, MAE_E: float, RMSE_F: float, MAE_F: flo
     left = top = width = height = Inches(1)
     txBox = slide.shapes.add_textbox(left, top, width, height)
     tf = txBox.text_frame
+    tf.text = "Vacancy formation"
+    img_path = "Vacancy_formation_pace.png"
+    picleft = Inches(3)
+    picheight = Inches(5.5)
+    pic = slide.shapes.add_picture(img_path, picleft, top, height=picheight)
+
+    slide = prs.slides.add_slide(blank_slide_layout)
+    left = top = width = height = Inches(1)
+    txBox = slide.shapes.add_textbox(left, top, width, height)
+    tf = txBox.text_frame
     tf.text = "Burgers_Bains"
     img_path = "Ti_Burgers_strain.png"
     picleft = Inches(3)
@@ -958,7 +992,7 @@ def main():
             and data["calc"] == "final"
             and data["metadata"]["proto"] == "omega.vasp"
         ):
-            ref_omega_pace = data["energy"]
+            ref_omega_dft = data["energy"]
     ref_omega_dft = ref_omega_dft / 3
 
     ref_omega_pace = 0
@@ -984,15 +1018,12 @@ def main():
             data_collection[i]["pace"]["energy"] / atom_num - ref_omega_pace
         )
         forces_pace += data_collection[i]["pace"]["forces"].tolist()
-
+        print()
     with plt.style.context("science"):
         plt.figure()
         plt.scatter(energies_dft, energies_pace, c="r", s=0.3)
-        plt.legend()
         plt.xlabel(r"$\Delta E^{DFT} \enspace (eV/atom)$")
         plt.ylabel(r"$\Delta E^{pred} \enspace (eV/atom)$")
-        plt.xlim([0, 6])
-        plt.ylim([0, 6])
         plt.savefig("pace_energy.png", dpi=200)
         plt.close()
     RMSE_E = np.sqrt(mean_squared_error(energies_dft, energies_pace))
@@ -1017,10 +1048,10 @@ def main():
     Strain(data_collection, ref_omega_dft, ref_omega_pace)
     Gsfe_withoutUber(data_collection)
     Burgers_Bains(data_collection)
-    bcc_omega(data_collection)
+    bcc_omega(data_collection, ref_omega_pace)
     hcp_omega(data_collection)
     Strain(data_collection, ref_omega_dft, ref_omega_pace)
-    collect_in_powerpoint(RMSE_E, MAE_E, RMSE_F, RMSE_F)
+    collect_in_powerpoint(data_collection, RMSE_E, MAE_E, RMSE_F, RMSE_F)
 
 
 if __name__ == "__main__":
