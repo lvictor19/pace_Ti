@@ -225,6 +225,71 @@ def Vacancy_formation(data_collection: list):
     return
 
 
+####### Volumetric deformation #######
+#############################
+def  Volumetric_deformation(data_collection:list,ref_omega_dft:float, ref_omega_pace:float):
+    """
+    Volumetric deformation energy analysis
+    input data_collection::list
+    ref_omega_dft::float   reference energy (per atom) for omega structure from dft calculation
+    ref_omega_pace::float  reference energy (per atom) for omega structure from pace potential
+    output pictures of Energy curves with deformation
+    """
+    volumetric_id=[]
+    for i in np.arange(len(data_collection)):
+        if data_collection[i]['metadata']['perturbation']=="volumetric":
+            volumetric_id.append(i)
+    protos=set()
+    for i in volumetric_id:
+        protos.add(data_collection[i]['metadata']['proto'])
+    with plt.style.context('science'):
+        plt.figure()
+        for i in np.arange(len(protos)):
+            Vs=[]
+            Es=[]
+            Epreds=[]
+            for j in volumetric_id:
+                if data_collection[j]['metadata']['proto']==list(protos)[i]:
+                    Vs.append(data_collection[j]['metadata']['volume']/len(data_collection[j]['structure'].species))
+                    Es.append(data_collection[j]['energy']/len(data_collection[j]['structure'].species))
+                    Epreds.append(data_collection[j]['pace']['energy']/len(data_collection[j]['structure'].species))
+            Vs=np.array(Vs)
+            Es=np.array(Es)-ref_omega_dft
+            Epreds=np.array(Epreds)-ref_omega_pace
+            order=np.argsort(Vs)
+            plt.scatter(Vs[order],Es[order],c=colors[i],marker=markers[i],s=0.2,label=list(protos)[i])
+            plt.plot(Vs[order],Epreds[order],c=colors[i])
+        plt.xlabel(r"$\overline{V} \enspace (Å^{3}/atom)$")
+        plt.ylabel(r"$\Delta E (eV/atom)$")
+        plt.legend(bbox_to_anchor=(0.5, -0.05))
+        plt.savefig("Volumetric_deformation_pace.png",dpi=200)
+        plt.close()
+    for iter in np.arange(4):
+        with plt.style.context('science'):
+            plt.figure()
+            for i in np.arange(6):
+                Vs=[]
+                Es=[]
+                Epreds=[]
+                for j in volumetric_id:
+                    if data_collection[j]['metadata']['proto']==list(protos)[i+iter*6]:
+                        Vs.append(data_collection[j]['metadata']['volume']/len(data_collection[j]['structure'].species))
+                        Es.append(data_collection[j]['energy']/len(data_collection[j]['structure'].species))
+                        Epreds.append(data_collection[j]['pace']['energy']/len(data_collection[j]['structure'].species))
+                Vs=np.array(Vs)
+                Es=np.array(Es)-ref_omega_dft
+                Epreds=np.array(Epreds)-ref_omega_pace
+                order=np.argsort(Vs)
+                plt.scatter(Vs[order],Es[order],c=colors[i],marker=markers[i],s=3,label=list(protos)[i+iter*6])
+                plt.plot(Vs[order],Epreds[order],c=colors[i])
+            plt.xlabel(r"$\overline{V} \enspace (Å^{3}/atom)$")
+            plt.ylabel(r"$\Delta E \enspace (eV/atom)$")
+            plt.legend(bbox_to_anchor=(0.5, -0.15))
+            plt.savefig('Volumetric_deformation_'+str(iter)+'_pace.png',dpi=250)
+            plt.close()
+
+
+
 ####### Grain boudary #######
 #############################
 def Grain_boundary(data_collection: list):
@@ -423,7 +488,9 @@ def Strain(data_collection: list, ref_omega_dft: float, ref_omega_pace):
                     Energies_pred[order] - ref_omega_pace,
                     c=colors[i],
                 )
-                plt.legend(bbox_to_anchor=(0.5, -0.05))
+                # plt.legend(bbox_to_anchor=(0.5, -0.05))
+                plt.xlabel('Strain Magnitude')
+                plt.ylabel(r"$\Delta E \enspace (eV/atom)$")
                 i += 1
             plt.savefig("Strains_" + proto + "_pace.png", dpi=200)
             plt.close()
@@ -638,10 +705,12 @@ def Burgers_Bains(data_collection: list):
     for i in np.arange(len(data_collection)):
         if (
             data_collection[i]["metadata"]["perturbation"] == "Burgers_Bains"
-            and data_collection[i]["calc"] == "final"
+            and data_collection[i]['metadata']['value'][:3] in ['sh_','sp_','sn_']
+            # and data_collection[i]["calc"] == "final"
         ):
             B_B_id.append(i)
     bccref_pace = 0
+    bccref_dft=0
     for data in data_collection:
         if (
             data["metadata"]["perturbation"] == "icsd"
@@ -649,18 +718,29 @@ def Burgers_Bains(data_collection: list):
             and data["metadata"]["proto"] == "bcc.vasp"
         ):
             bccref_pace = data["pace"]["energy"] / len(data["structure"])
+            bccref_dft = data["energy"] / len(data["structure"])
+
     bccref_pace
     unshuffled_values = []
-    unshuffled_energies = []
+    unshuffled_energies_dft = []
+    unshuffled_energies_pace = []
+
     shuffled_values = []
-    shuffled_energies = []
+    shuffled_energies_dft = []
+    shuffled_energies_pace = []
+
     for id in B_B_id:
         if "sh" in data_collection[id]["metadata"]["value"]:
             symbol = 1 if "p" in data_collection[id]["metadata"]["value"] else -1
             shuffled_values.append(
                 symbol * float(data_collection[id]["metadata"]["value"].split("_")[-1])
             )
-            shuffled_energies.append(
+            shuffled_energies_dft.append(
+                float(data_collection[id]["energy"])
+                / len(data_collection[id]["structure"])
+                - bccref_dft
+            )
+            shuffled_energies_pace.append(
                 float(data_collection[id]["pace"]["energy"])
                 / len(data_collection[id]["structure"])
                 - bccref_pace
@@ -670,25 +750,42 @@ def Burgers_Bains(data_collection: list):
             unshuffled_values.append(
                 symbol * float(data_collection[id]["metadata"]["value"].split("_")[-1])
             )
-            unshuffled_energies.append(
+            unshuffled_energies_dft.append(
+                float(data_collection[id]["energy"])
+                / len(data_collection[id]["structure"])
+                - bccref_dft
+            )
+            unshuffled_energies_pace.append(
                 float(data_collection[id]["pace"]["energy"])
                 / len(data_collection[id]["structure"])
                 - bccref_pace
             )
     unshuffled_values = np.array(unshuffled_values)
-    unshuffled_energies = np.array(unshuffled_energies)
+    unshuffled_energies_dft = np.array(unshuffled_energies_dft)
+    unshuffled_energies_pace = np.array(unshuffled_energies_pace)
+
     shuffled_values = np.array(shuffled_values)
-    shuffled_energies = np.array(shuffled_energies)
+    shuffled_energies_dft = np.array(shuffled_energies_dft)
+    shuffled_energies_pace = np.array(shuffled_energies_pace)
+
+
     unshuffled_index = np.argsort(unshuffled_values)
     shuffled_index = np.argsort(shuffled_values)
+
     unshuffled_values = unshuffled_values[unshuffled_index]
-    unshuffled_energies = unshuffled_energies[unshuffled_index]
+    unshuffled_energies_dft = unshuffled_energies_dft[unshuffled_index]
+    unshuffled_energies_pace = unshuffled_energies_pace[unshuffled_index]
+
     shuffled_values = shuffled_values[shuffled_index]
-    shuffled_energies = shuffled_energies[shuffled_index]
+    shuffled_energies_dft = shuffled_energies_dft[shuffled_index]
+    shuffled_energies_pace = shuffled_energies_pace[shuffled_index]
+
     with plt.style.context("science"):
         plt.figure()
-        plt.scatter(shuffled_values, shuffled_energies, s=6, c="r")
-        plt.scatter(unshuffled_values, unshuffled_energies, s=6, c="b")
+        plt.scatter(shuffled_values, shuffled_energies_dft, s=6, c="r")
+        plt.scatter(unshuffled_values, unshuffled_energies_dft, s=6, c="b")
+        plt.plot(shuffled_values, shuffled_energies_pace, c="r")
+        plt.plot(unshuffled_values, unshuffled_energies_pace, c="b")
         plt.ylabel("Energy (eV/atom)", fontsize=12)
         plt.tick_params(axis="y", direction="in")
         plt.tick_params(axis="x", direction="in")
@@ -696,9 +793,11 @@ def Burgers_Bains(data_collection: list):
         plt.close()
 
 
-def bcc_omega(data_collection: list, ref_omega_pace: float):
+def bcc_omega(data_collection: list, ref_omega_dft:float,ref_omega_pace: float):
     """
     analysis for the pathway connecting bcc and omega
+    ref_omega_dft::float   reference energy (per atom) for omega structure from dft calculation
+    ref_omega_pace::float  reference energy (per atom) for omega structure from pace potential
     """
     b_o_id = []
     for i in np.arange(len(data_collection)):
@@ -708,22 +807,29 @@ def bcc_omega(data_collection: list, ref_omega_pace: float):
         ):
             b_o_id.append(i)
     values = []
-    Energies = []
+    Energies_dft = []
+    Energies_pace = []
     for id in b_o_id:
         values.append(data_collection[id]["metadata"]["value"])
-        Energies.append(
+        Energies_pace.append(
             data_collection[id]["pace"]["energy"]
             / len(data_collection[id]["structure"])
         )
+        Energies_dft.append(
+            data_collection[id]["energy"]
+            / len(data_collection[id]["structure"])
+        )
     values = np.array(values)
-    Energies = np.array(Energies)
+    Energies_dft = np.array(Energies_dft)
+    Energies_pace = np.array(Energies_pace)
     index = np.argsort(values)
     values = values[index]
-    Energies = Energies[index]
+    Energies_dft = Energies_dft[index]
+    Energies_pace = Energies_pace[index]
     with plt.style.context("science"):
         plt.figure()
-        plt.plot(np.arange(len(Energies)), Energies - ref_omega_pace, c="black")
-        plt.scatter(np.arange(len(Energies)), Energies - ref_omega_pace, c="black", s=4)
+        plt.plot(np.arange(len(Energies_pace)), Energies_pace - ref_omega_pace, c="black")
+        plt.scatter(np.arange(len(Energies_dft)), Energies_dft - ref_omega_dft, c="black", s=4)
 
         plt.xlabel("Omega Transformation")
         plt.xticks([])
@@ -757,19 +863,17 @@ def hcp_omega(data_collection: list):
                 and data_collection[i]["metadata"]["NEB"] == "True"
             ):
                 h_o_NEB_id.append(i)
-    hcp_energy = 0
-    omega_energy = 0
+    hcp_energy_pace=0
+    omega_energy_pace=0
+    hcp_energy_dft=0
+    omega_energy_dft=0
     for i in np.arange(len(data_collection)):
-        if (
-            data_collection[i]["metadata"]["perturbation"] == "hcp_omega"
-            and data_collection[i]["metadata"]["proto"] == "hcp"
-        ):
-            hcp_energy = data_collection[i]["pace"]["energy"] / len(
-                data_collection[i]["structure"]
-            )
-            omega_energy = data_collection[i]["pace"]["energy"] / len(
-                data_collection[i]["structure"]
-            )
+        if data_collection[i]['metadata']['perturbation']=='hcp_omega' and data_collection[i]['metadata']['proto']=='hcp':
+            hcp_energy_dft=data_collection[i]['energy']/len(data_collection[i]['structure'])
+            hcp_energy_pace=data_collection[i]['pace']['energy']/len(data_collection[i]['structure'])
+        if data_collection[i]['metadata']['perturbation']=='hcp_omega' and data_collection[i]['metadata']['proto']=='omega':
+            omega_energy_dft=data_collection[i]['energy']/len(data_collection[i]['structure'])
+            omega_energy_pace=data_collection[i]['pace']['energy']/len(data_collection[i]['structure'])
     pathways = set()
     for id in h_o_static_id:
         pathways.add(data_collection[id]["metadata"]["#pathway"])
@@ -1043,12 +1147,13 @@ def main():
     RMSE_F = np.sqrt(mean_squared_error(forces_sca_dft, forces_sca_pace))
     MAE_F = mean_absolute_error(forces_sca_dft, forces_sca_pace)
     Vacancy_formation(data_collection)
+    Volumetric_deformation(data_collection,ref_omega_dft, ref_omega_pace)
     Grain_boundary(data_collection)
     Surface(data_collection)
     Strain(data_collection, ref_omega_dft, ref_omega_pace)
     Gsfe_withoutUber(data_collection)
     Burgers_Bains(data_collection)
-    bcc_omega(data_collection, ref_omega_pace)
+    bcc_omega(data_collection, ref_omega_dft,ref_omega_pace)
     hcp_omega(data_collection)
     Strain(data_collection, ref_omega_dft, ref_omega_pace)
     collect_in_powerpoint(data_collection, RMSE_E, MAE_E, RMSE_F, RMSE_F)
