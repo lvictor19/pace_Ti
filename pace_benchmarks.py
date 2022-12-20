@@ -2,6 +2,7 @@
 
 import os
 import json
+import glob
 import pandas as pd
 from pandas.plotting import table
 from monty.json import MontyDecoder, MontyEncoder
@@ -227,7 +228,9 @@ def Vacancy_formation(data_collection: list):
 
 ####### Volumetric deformation #######
 #############################
-def  Volumetric_deformation(data_collection:list,ref_omega_dft:float, ref_omega_pace:float):
+def Volumetric_deformation(
+    data_collection: list, ref_omega_dft: float, ref_omega_pace: float
+):
     """
     Volumetric deformation energy analysis
     input data_collection::list
@@ -235,59 +238,93 @@ def  Volumetric_deformation(data_collection:list,ref_omega_dft:float, ref_omega_
     ref_omega_pace::float  reference energy (per atom) for omega structure from pace potential
     output pictures of Energy curves with deformation
     """
-    volumetric_id=[]
+    volumetric_id = []
     for i in np.arange(len(data_collection)):
-        if data_collection[i]['metadata']['perturbation']=="volumetric":
+        if data_collection[i]["metadata"]["perturbation"] == "volumetric":
             volumetric_id.append(i)
-    protos=set()
+    protos = set()
     for i in volumetric_id:
-        protos.add(data_collection[i]['metadata']['proto'])
-    with plt.style.context('science'):
+        protos.add(data_collection[i]["metadata"]["proto"])
+    with plt.style.context("science"):
         plt.figure()
         for i in np.arange(len(protos)):
-            Vs=[]
-            Es=[]
-            Epreds=[]
+            Vs = []
+            Es = []
+            Epreds = []
             for j in volumetric_id:
-                if data_collection[j]['metadata']['proto']==list(protos)[i]:
-                    Vs.append(data_collection[j]['metadata']['volume']/len(data_collection[j]['structure'].species))
-                    Es.append(data_collection[j]['energy']/len(data_collection[j]['structure'].species))
-                    Epreds.append(data_collection[j]['pace']['energy']/len(data_collection[j]['structure'].species))
-            Vs=np.array(Vs)
-            Es=np.array(Es)-ref_omega_dft
-            Epreds=np.array(Epreds)-ref_omega_pace
-            order=np.argsort(Vs)
-            plt.scatter(Vs[order],Es[order],c=colors[i],marker=markers[i],s=0.2,label=list(protos)[i])
-            plt.plot(Vs[order],Epreds[order],c=colors[i])
+                if data_collection[j]["metadata"]["proto"] == list(protos)[i]:
+                    Vs.append(
+                        data_collection[j]["metadata"]["volume"]
+                        / len(data_collection[j]["structure"].species)
+                    )
+                    Es.append(
+                        data_collection[j]["energy"]
+                        / len(data_collection[j]["structure"].species)
+                    )
+                    Epreds.append(
+                        data_collection[j]["pace"]["energy"]
+                        / len(data_collection[j]["structure"].species)
+                    )
+            Vs = np.array(Vs)
+            Es = np.array(Es) - ref_omega_dft
+            Epreds = np.array(Epreds) - ref_omega_pace
+            order = np.argsort(Vs)
+            plt.scatter(
+                Vs[order],
+                Es[order],
+                c=colors[i],
+                marker=markers[i],
+                s=0.2,
+                label=list(protos)[i],
+            )
+            plt.plot(Vs[order], Epreds[order], c=colors[i])
         plt.xlabel(r"$\overline{V} \enspace (Å^{3}/atom)$")
         plt.ylabel(r"$\Delta E (eV/atom)$")
         plt.legend(bbox_to_anchor=(0.5, -0.05))
-        plt.savefig("Volumetric_deformation_pace.png",dpi=200)
+        plt.savefig("Volumetric_deformation_pace.png", dpi=200)
         plt.close()
     for iter in np.arange(4):
-        with plt.style.context('science'):
+        with plt.style.context("science"):
             plt.figure()
             for i in np.arange(6):
-                Vs=[]
-                Es=[]
-                Epreds=[]
+                Vs = []
+                Es = []
+                Epreds = []
                 for j in volumetric_id:
-                    if data_collection[j]['metadata']['proto']==list(protos)[i+iter*6]:
-                        Vs.append(data_collection[j]['metadata']['volume']/len(data_collection[j]['structure'].species))
-                        Es.append(data_collection[j]['energy']/len(data_collection[j]['structure'].species))
-                        Epreds.append(data_collection[j]['pace']['energy']/len(data_collection[j]['structure'].species))
-                Vs=np.array(Vs)
-                Es=np.array(Es)-ref_omega_dft
-                Epreds=np.array(Epreds)-ref_omega_pace
-                order=np.argsort(Vs)
-                plt.scatter(Vs[order],Es[order],c=colors[i],marker=markers[i],s=3,label=list(protos)[i+iter*6])
-                plt.plot(Vs[order],Epreds[order],c=colors[i])
+                    if (
+                        data_collection[j]["metadata"]["proto"]
+                        == list(protos)[i + iter * 6]
+                    ):
+                        Vs.append(
+                            data_collection[j]["metadata"]["volume"]
+                            / len(data_collection[j]["structure"].species)
+                        )
+                        Es.append(
+                            data_collection[j]["energy"]
+                            / len(data_collection[j]["structure"].species)
+                        )
+                        Epreds.append(
+                            data_collection[j]["pace"]["energy"]
+                            / len(data_collection[j]["structure"].species)
+                        )
+                Vs = np.array(Vs)
+                Es = np.array(Es) - ref_omega_dft
+                Epreds = np.array(Epreds) - ref_omega_pace
+                order = np.argsort(Vs)
+                plt.scatter(
+                    Vs[order],
+                    Es[order],
+                    c=colors[i],
+                    marker=markers[i],
+                    s=3,
+                    label=list(protos)[i + iter * 6],
+                )
+                plt.plot(Vs[order], Epreds[order], c=colors[i])
             plt.xlabel(r"$\overline{V} \enspace (Å^{3}/atom)$")
             plt.ylabel(r"$\Delta E \enspace (eV/atom)$")
             plt.legend(bbox_to_anchor=(0.5, -0.15))
-            plt.savefig('Volumetric_deformation_'+str(iter)+'_pace.png',dpi=250)
+            plt.savefig("Volumetric_deformation_" + str(iter) + "_pace.png", dpi=250)
             plt.close()
-
 
 
 ####### Grain boudary #######
@@ -450,22 +487,43 @@ def Strain(data_collection: list, ref_omega_dft: float, ref_omega_pace):
         with plt.style.context("science"):
             plt.figure()
             for group in groups:
-                magnitudes = []
-                Energies = []
-                Energies_pred = []
+                magnitudes_ = []
+                Energies_ = []
+                Energies_pred_ = []
                 for groupid in group:
                     Natom = len(
                         data_collection[strain_id[groupid]]["structure"].species
                     )
-                    magnitudes.append(
+                    magnitudes_.append(
                         data_collection[strain_id[groupid]]["metadata"]["magnitude"]
                     )
-                    Energies.append(
+                    Energies_.append(
                         data_collection[strain_id[groupid]]["energy"] / Natom
                     )
-                    Energies_pred.append(
+                    Energies_pred_.append(
                         data_collection[strain_id[groupid]]["pace"]["energy"] / Natom
                     )
+                magnitudes = []
+                Energies = []
+                Energies_pred = []
+                magnitudes_ = np.array(magnitudes_)
+                for checkindex in np.arange(len(magnitudes_)):
+                    samemag = np.where(
+                        abs(magnitudes_ - magnitudes_[checkindex]) < 1e-2
+                    )[0]
+                    if len(samemag) == 1:
+                        magnitudes.append(magnitudes_[checkindex])
+                        Energies.append(Energies_[checkindex])
+                        Energies_pred.append(Energies_pred_[checkindex])
+                    else:
+                        flag = 1
+                        for mag in samemag:
+                            if Energies_[checkindex] > Energies_[mag]:
+                                flag = 0
+                        if flag == 1:
+                            magnitudes.append(magnitudes_[checkindex])
+                            Energies.append(Energies_[checkindex])
+                            Energies_pred.append(Energies_pred_[checkindex])
                 magnitudes = np.array(magnitudes)
                 Energies = np.array(Energies)
                 Energies_pred = np.array(Energies_pred)
@@ -489,11 +547,27 @@ def Strain(data_collection: list, ref_omega_dft: float, ref_omega_pace):
                     c=colors[i],
                 )
                 # plt.legend(bbox_to_anchor=(0.5, -0.05))
-                plt.xlabel('Strain Magnitude')
+                plt.xlabel("Strain Magnitude")
                 plt.ylabel(r"$\Delta E \enspace (eV/atom)$")
                 i += 1
             plt.savefig("Strains_" + proto + "_pace.png", dpi=200)
             plt.close()
+
+
+def plotlinescan(datapace: np.ndarray, datadft: np.ndarray, name: str, axisname: str):
+    """
+    plot stacking fault energy linescan
+    input datapace
+    """
+    with plt.style.context("science"):
+        plt.figure()
+        plt.scatter(np.arange(0, 1.01, 1 / 12), datadft, marker=".", color="k")
+        plt.plot(np.arange(0, 1.01, 1 / 12), datapace, color="orangered")
+        plt.xlabel(axisname)
+        plt.ylabel(r"$Excess \enspace Energy \enspace (mJ/m^2)$")
+        plt.tight_layout()
+        plt.savefig(name)
+        plt.close()
 
 
 ####### Generalized stacking fault energy #######
@@ -504,9 +578,39 @@ def Gsfe_withoutUber(data_collection: list):
     input data_collection::list
     output pictures of the gamma-surfaces
     """
+
     faces = ["bcc100", "bcc110", "fcc100", "fcc111", "basal", "prismatic", "pyramidal"]
     protos = ["bcc", "bcc", "fcc", "fcc", "hcp", "hcp", "hcp"]
     planes = ["100", "110", "100", "111", "basal", "prismatic", "pyramidal"]
+
+    whichlines = {}
+    whichlines["bcc100"] = [("0_", r"$[100]$"), ("__", r"$[110]$")]
+    whichlines["bcc110"] = [
+        ("0_", r"$1/2 \enspace [1 \overline{1} 1]$"),
+        ("__", r"$[100]$"),
+        ("_-_", r"$[0 \overline{1} 1]$"),
+    ]
+    whichlines["fcc100"] = [("0_", r"$1/2 \enspace [110]$"), ("__", r"$[010]$")]
+    whichlines["fcc111"] = [
+        ("0_", r"$[101]$"),
+        ("__", r"$[112]$"),
+        ("_-_", r"$[1 \overline{1} 0]$"),
+    ]
+    whichlines["basal"] = [
+        ("0_", r"$1/3 \enspace [1 1 \overline{2} 0]$"),
+        ("__", r"$1/3 \enspace [\overline{2} 4 \overline{2} 0]$"),
+        ("_-_", r"$1/3 \enspace [4 2 \overline{2} 0]$"),
+    ]
+    whichlines["prismatic"] = [
+        ("0_", r"$1/3 \enspace [1 1 \overline{2} 0]$"),
+        ("_0", r"$[0001]$"),
+        ("__", r"$1/3 \enspace [1 1 \overline{2} 3]$"),
+    ]
+    whichlines["pyramidal"] = [
+        ("_0", r"$1/3 \enspace [\overline{2} 1 1 0]$"),
+        ("special", r"$1/3 \enspace [0 \overline{1} 1 2]$"),
+    ]
+
     for whichface in np.arange(7):
         face = faces[whichface]
         with open(face + "record.json") as f:
@@ -522,7 +626,8 @@ def Gsfe_withoutUber(data_collection: list):
             if not equi_orbit == []:
                 equivalents.append(equi_orbit)
 
-        values = np.zeros((13, 13), dtype=float)
+        values_pace = np.zeros((13, 13), dtype=float)
+        values_dft = np.zeros((13, 13), dtype=float)
         for i in np.arange(len(equivalents)):
             first = equivalents[i][0]
             eqe = 0
@@ -537,7 +642,8 @@ def Gsfe_withoutUber(data_collection: list):
                     and data["metadata"]["cleavage"] == 0
                 ):
                     eqe = data["pace"]["energy"]
-            value = 0
+            value_pace = 0
+            value_dft = 0
             for data in data_collection:
                 if (
                     data["calc"] == "final"
@@ -548,14 +654,21 @@ def Gsfe_withoutUber(data_collection: list):
                     and data["metadata"]["shift1"] == int(first.split(".")[1])
                     and data["metadata"]["cleavage"] == 0
                 ):
-                    value = data["pace"]["energy"]
+                    value_pace = data["pace"]["energy"]
+                    value_dft = data["energy"]
 
             for j in np.arange(len(equivalents[i])):
                 which = equivalents[i][j].split(".")
-                values[int(which[0]), int(which[1])] = value
-        values[12, :] = values[0, :]
-        values[:, 12] = values[:, 0]
-        values = (values - values[0, 0]) * 1000
+                values_pace[int(which[0]), int(which[1])] = value_pace
+                values_dft[int(which[0]), int(which[1])] = value_dft
+
+        values_pace[12, :] = values_pace[0, :]
+        values_pace[:, 12] = values_pace[:, 0]
+        values_pace = (values_pace - values_pace[0, 0]) * 1000
+
+        values_dft[12, :] = values_dft[0, :]
+        values_dft[:, 12] = values_dft[:, 0]
+        values_dft = (values_dft - values_dft[0, 0]) * 1000
 
         def plot_surface_heatmap(ax, X, Y, Z):
             pc = ax.pcolormesh(X, Y, Z)
@@ -567,17 +680,60 @@ def Gsfe_withoutUber(data_collection: list):
 
             return ax, cbar
 
-        values = (values - values[0, 0]) * 1000
+        values_pace = (values_pace - values_pace[0, 0]) * 1000
+        values_dft = (values_dft - values_dft[0, 0]) * 1000
 
         fig = plt.figure()
         ax = fig.add_subplot(111)
         x = np.arange(0, 1 + 1e-7, 1 / 12)
         y = np.arange(0, 1 + 1e-7, 1 / 12)
         X, Y = np.meshgrid(x, y)
-        ax, cbar = plot_surface_heatmap(ax, X, Y, values)
+        ax, cbar = plot_surface_heatmap(ax, X, Y, values_pace)
         plt.tight_layout()
-        plt.savefig("2d_" + faces[whichface] + ".png")
+        plt.savefig("2d_" + faces[whichface] + "_pace.png")
         plt.close()
+        for line in whichlines[faces[whichface]]:
+            if line[0] == "0_":
+                plotlinescan(
+                    values_pace[0, :],
+                    values_dft[0, :],
+                    faces[whichface] + "-" + "linescan0_.png",
+                    line[1],
+                )
+            elif line[0] == "_0":
+                plotlinescan(
+                    values_pace[:, 0],
+                    values_dft[:, 0],
+                    faces[whichface] + "-" + "linescan_0.png",
+                    line[1],
+                )
+            elif line[0] == "__":
+                plotlinescan(
+                    np.diag(values_pace),
+                    np.diag(values_dft),
+                    faces[whichface] + "-" + "linescan__.png",
+                    line[1],
+                )
+            elif line[0] == "_-_":
+                plotlinescan(
+                    np.diag(np.flipud(values_pace)),
+                    np.diag(np.flipud(values_dft)),
+                    faces[whichface] + "-" + "linescan_-_.png",
+                    line[1],
+                )
+            elif line[0] == "special":
+                plotlinescan(
+                    values_pace[
+                        np.arange(13),
+                        np.array([0, 2, 4, 6, 8, 10, 12, 2, 4, 6, 8, 10, 12]),
+                    ],
+                    values_dft[
+                        np.arange(13),
+                        np.array([0, 2, 4, 6, 8, 10, 12, 2, 4, 6, 8, 10, 12]),
+                    ],
+                    faces[whichface] + "-" + "linescan_-_.png",
+                    line[1],
+                )
 
 
 #####modified functions from uber.py#####
@@ -603,7 +759,7 @@ def surface_energy(unwinded, eqe):
 
 ####### Generalized stacking fault energy #######
 ################ with uberfit ###################
-def gmsf(data_collection):
+def gsfe(data_collection):
     """
     Generalized stacking fault energy analysis with UBER fittting
     input data_collection::list
@@ -693,7 +849,7 @@ def gmsf(data_collection):
         X, Y = np.meshgrid(x, y)
         ax, cbar = plot_surface_heatmap(ax, X, Y, values)
         plt.tight_layout()
-        plt.savefig("2d_" + faces[whichface] + ".png")
+        plt.savefig("2d_" + faces[whichface] + "_pace.png")
         plt.close()
 
 
@@ -705,12 +861,12 @@ def Burgers_Bains(data_collection: list):
     for i in np.arange(len(data_collection)):
         if (
             data_collection[i]["metadata"]["perturbation"] == "Burgers_Bains"
-            and data_collection[i]['metadata']['value'][:3] in ['sh_','sp_','sn_']
+            and data_collection[i]["metadata"]["value"][:3] in ["sh_", "sp_", "sn_"]
             # and data_collection[i]["calc"] == "final"
         ):
             B_B_id.append(i)
     bccref_pace = 0
-    bccref_dft=0
+    bccref_dft = 0
     for data in data_collection:
         if (
             data["metadata"]["perturbation"] == "icsd"
@@ -768,7 +924,6 @@ def Burgers_Bains(data_collection: list):
     shuffled_energies_dft = np.array(shuffled_energies_dft)
     shuffled_energies_pace = np.array(shuffled_energies_pace)
 
-
     unshuffled_index = np.argsort(unshuffled_values)
     shuffled_index = np.argsort(shuffled_values)
 
@@ -793,7 +948,7 @@ def Burgers_Bains(data_collection: list):
         plt.close()
 
 
-def bcc_omega(data_collection: list, ref_omega_dft:float,ref_omega_pace: float):
+def bcc_omega(data_collection: list, ref_omega_dft: float, ref_omega_pace: float):
     """
     analysis for the pathway connecting bcc and omega
     ref_omega_dft::float   reference energy (per atom) for omega structure from dft calculation
@@ -816,8 +971,7 @@ def bcc_omega(data_collection: list, ref_omega_dft:float,ref_omega_pace: float):
             / len(data_collection[id]["structure"])
         )
         Energies_dft.append(
-            data_collection[id]["energy"]
-            / len(data_collection[id]["structure"])
+            data_collection[id]["energy"] / len(data_collection[id]["structure"])
         )
     values = np.array(values)
     Energies_dft = np.array(Energies_dft)
@@ -828,8 +982,12 @@ def bcc_omega(data_collection: list, ref_omega_dft:float,ref_omega_pace: float):
     Energies_pace = Energies_pace[index]
     with plt.style.context("science"):
         plt.figure()
-        plt.plot(np.arange(len(Energies_pace)), Energies_pace - ref_omega_pace, c="black")
-        plt.scatter(np.arange(len(Energies_dft)), Energies_dft - ref_omega_dft, c="black", s=4)
+        plt.plot(
+            np.arange(len(Energies_pace)), Energies_pace - ref_omega_pace, c="black"
+        )
+        plt.scatter(
+            np.arange(len(Energies_dft)), Energies_dft - ref_omega_dft, c="black", s=4
+        )
 
         plt.xlabel("Omega Transformation")
         plt.xticks([])
@@ -863,17 +1021,31 @@ def hcp_omega(data_collection: list):
                 and data_collection[i]["metadata"]["NEB"] == "True"
             ):
                 h_o_NEB_id.append(i)
-    hcp_energy_pace=0
-    omega_energy_pace=0
-    hcp_energy_dft=0
-    omega_energy_dft=0
+    hcp_energy_pace = 0
+    omega_energy_pace = 0
+    hcp_energy_dft = 0
+    omega_energy_dft = 0
     for i in np.arange(len(data_collection)):
-        if data_collection[i]['metadata']['perturbation']=='hcp_omega' and data_collection[i]['metadata']['proto']=='hcp':
-            hcp_energy_dft=data_collection[i]['energy']/len(data_collection[i]['structure'])
-            hcp_energy_pace=data_collection[i]['pace']['energy']/len(data_collection[i]['structure'])
-        if data_collection[i]['metadata']['perturbation']=='hcp_omega' and data_collection[i]['metadata']['proto']=='omega':
-            omega_energy_dft=data_collection[i]['energy']/len(data_collection[i]['structure'])
-            omega_energy_pace=data_collection[i]['pace']['energy']/len(data_collection[i]['structure'])
+        if (
+            data_collection[i]["metadata"]["perturbation"] == "hcp_omega"
+            and data_collection[i]["metadata"]["proto"] == "hcp"
+        ):
+            hcp_energy_dft = data_collection[i]["energy"] / len(
+                data_collection[i]["structure"]
+            )
+            hcp_energy_pace = data_collection[i]["pace"]["energy"] / len(
+                data_collection[i]["structure"]
+            )
+        if (
+            data_collection[i]["metadata"]["perturbation"] == "hcp_omega"
+            and data_collection[i]["metadata"]["proto"] == "omega"
+        ):
+            omega_energy_dft = data_collection[i]["energy"] / len(
+                data_collection[i]["structure"]
+            )
+            omega_energy_pace = data_collection[i]["pace"]["energy"] / len(
+                data_collection[i]["structure"]
+            )
     pathways = set()
     for id in h_o_static_id:
         pathways.add(data_collection[id]["metadata"]["#pathway"])
@@ -907,7 +1079,7 @@ def hcp_omega(data_collection: list):
             plt.figure()
             plt.scatter(np.arange(7), energies_dft)
             plt.plot(np.arange(7), energies_pace)
-            plt.savefig(str(pathway) + "_NEB.png")
+            plt.savefig(str(pathway) + "_NEB_pace.png")
             plt.close()
 
         energies_dft = np.zeros(7)
@@ -937,7 +1109,7 @@ def hcp_omega(data_collection: list):
             plt.figure()
             plt.scatter(np.arange(7), energies_dft)
             plt.plot(np.arange(7), energies_pace)
-            plt.savefig(str(pathway) + "_static.png")
+            plt.savefig(str(pathway) + "_static_pace.png")
             plt.close()
 
 
@@ -1049,8 +1221,6 @@ def collect_in_powerpoint(
     picheight = Inches(5.5)
     pic = slide.shapes.add_picture(img_path, picleft, top, height=picheight)
 
-    ############################### hcp 2 omega ################################
-
     strain_id = []
     for i in np.arange(len(data_collection)):
         if (
@@ -1074,6 +1244,59 @@ def collect_in_powerpoint(
         picleft = Inches(3)
         picheight = Inches(5.5)
         pic = slide.shapes.add_picture(img_path, picleft, top, height=picheight)
+
+    pathnum = [
+        "0_static",
+        "0_NEB",
+        "1_static",
+        "1_NEB",
+        "67_static",
+        "67_NEB",
+        "297_static",
+        "297_NEB",
+        "357_static",
+        "357_NEB",
+        "499_static",
+        "499_NEB",
+    ]
+    for ptn in pathnum:
+        slide = prs.slides.add_slide(blank_slide_layout)
+        left = top = width = height = Inches(1)
+        txBox = slide.shapes.add_textbox(left, top, width, height)
+        txBox = slide.shapes.add_textbox(left, top, width, height)
+        tf = txBox.text_frame
+        tf.text = ptn
+        img_path = ptn + "_pace.png"
+        picleft = Inches(3)
+        picheight = Inches(5.5)
+        pic = slide.shapes.add_picture(img_path, picleft, top, height=picheight)
+
+    faces = ["bcc100", "bcc110", "fcc100", "fcc111", "basal", "prismatic", "pyramidal"]
+    for face in faces:
+        slide = prs.slides.add_slide(blank_slide_layout)
+        left = top = width = height = Inches(1)
+        txBox = slide.shapes.add_textbox(left, top, width, height)
+        txBox = slide.shapes.add_textbox(left, top, width, height)
+        tf = txBox.text_frame
+        tf.text = face
+        img_path = "2d_" + face + "_pace.png"
+        picleft = Inches(3)
+        picheight = Inches(5.5)
+        pic = slide.shapes.add_picture(img_path, picleft, top, height=picheight)
+
+    linescans = glob.glob("*linescan*")
+    for linescan in linescans:
+        slide = prs.slides.add_slide(blank_slide_layout)
+        left = top = width = height = Inches(1)
+        txBox = slide.shapes.add_textbox(left, top, width, height)
+        txBox = slide.shapes.add_textbox(left, top, width, height)
+        tf = txBox.text_frame
+        tf.text = linescan.split(".")[0]
+        img_path = linescan
+        picleft = Inches(3)
+        picheight = Inches(5.5)
+        pic = slide.shapes.add_picture(img_path, picleft, top, height=picheight)
+
     prs.save("0000.pptx")
 
 
@@ -1147,13 +1370,13 @@ def main():
     RMSE_F = np.sqrt(mean_squared_error(forces_sca_dft, forces_sca_pace))
     MAE_F = mean_absolute_error(forces_sca_dft, forces_sca_pace)
     Vacancy_formation(data_collection)
-    Volumetric_deformation(data_collection,ref_omega_dft, ref_omega_pace)
+    Volumetric_deformation(data_collection, ref_omega_dft, ref_omega_pace)
     Grain_boundary(data_collection)
     Surface(data_collection)
     Strain(data_collection, ref_omega_dft, ref_omega_pace)
     Gsfe_withoutUber(data_collection)
     Burgers_Bains(data_collection)
-    bcc_omega(data_collection, ref_omega_dft,ref_omega_pace)
+    bcc_omega(data_collection, ref_omega_dft, ref_omega_pace)
     hcp_omega(data_collection)
     Strain(data_collection, ref_omega_dft, ref_omega_pace)
     collect_in_powerpoint(data_collection, RMSE_E, MAE_E, RMSE_F, RMSE_F)
