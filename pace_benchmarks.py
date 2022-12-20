@@ -560,7 +560,7 @@ def plotlinescan(datapace: np.ndarray, datadft: np.ndarray, name: str, axisname:
     input datapace
     """
     with plt.style.context("science"):
-        plt.figure()
+        plt.figure(figsize=(5, 4))
         plt.scatter(np.arange(0, 1.01, 1 / 12), datadft, marker=".", color="k")
         plt.plot(np.arange(0, 1.01, 1 / 12), datapace, color="orangered")
         plt.xlabel(axisname)
@@ -1076,9 +1076,12 @@ def hcp_omega(data_collection: list):
         energies_dft = energies_dft - energies_dft[0]
         energies_pace = energies_pace - energies_pace[0]
         with plt.style.context("science"):
-            plt.figure()
+            plt.figure(figsize=(4, 3.2))
             plt.scatter(np.arange(7), energies_dft)
             plt.plot(np.arange(7), energies_pace)
+            plt.xlabel("Transformation Coordinates")
+            plt.ylabel(r"$Excess \enspace Energy \enspace (eV/Å)$")
+            plt.xticks([0, 6], ["omega", "hcp"])
             plt.savefig(str(pathway) + "_NEB_pace.png")
             plt.close()
 
@@ -1106,9 +1109,12 @@ def hcp_omega(data_collection: list):
         energies_dft = energies_dft - energies_dft[0]
         energies_pace = energies_pace - energies_pace[0]
         with plt.style.context("science"):
-            plt.figure()
+            plt.figure(figsize=(4, 3.2))
             plt.scatter(np.arange(7), energies_dft)
             plt.plot(np.arange(7), energies_pace)
+            plt.xlabel("Transformation Coordinates")
+            plt.ylabel(r"$Excess \enspace Energy \enspace (eV/Å)$")
+            plt.xticks([0, 6], ["omega", "hcp"])
             plt.savefig(str(pathway) + "_static_pace.png")
             plt.close()
 
@@ -1284,7 +1290,24 @@ def collect_in_powerpoint(
         picheight = Inches(5.5)
         pic = slide.shapes.add_picture(img_path, picleft, top, height=picheight)
 
-    linescans = glob.glob("*linescan*")
+    linescans_ = glob.glob("*linescan*")
+    linescans1 = [l for l in linescans_ if "bcc100" in l]
+    linescans2 = [l for l in linescans_ if "bcc110" in l]
+    linescans3 = [l for l in linescans_ if "fcc100" in l]
+    linescans4 = [l for l in linescans_ if "fcc111" in l]
+    linescans5 = [l for l in linescans_ if "basal" in l]
+    linescans6 = [l for l in linescans_ if "prismatic" in l]
+    linescans7 = [l for l in linescans_ if "pyramidal" in l]
+    linescans = (
+        linescans1
+        + linescans2
+        + linescans3
+        + linescans4
+        + linescans5
+        + linescans6
+        + linescans7
+    )
+
     for linescan in linescans:
         slide = prs.slides.add_slide(blank_slide_layout)
         left = top = width = height = Inches(1)
@@ -1333,40 +1356,76 @@ def main():
     ref_omega_pace = ref_omega_pace / 3
 
     #####evaluate energy and force prediction#####
-    energies_dft = np.zeros(len(data_collection))
+    energies_dft = []
     forces_dft = []
-    energies_pace = np.zeros(len(data_collection))
+    energies_pace = []
     forces_pace = []
+
+    energies_dft_stdt = []
+    forces_dft_stdt = []
+    energies_pace_stdt = []
+    forces_pace_stdt = []
     for i in tqdm(np.arange(len(data_collection))):
-        atom_num = len(data_collection[i]["structure"].species)
-        energies_dft[i] = data_collection[i]["energy"] / atom_num - ref_omega_dft
-        forces_dft += data_collection[i]["forces"]
-        energies_pace[i] = (
-            data_collection[i]["pace"]["energy"] / atom_num - ref_omega_pace
-        )
-        forces_pace += data_collection[i]["pace"]["forces"].tolist()
-        print()
+        if not "standout" in data_collection[i].keys():
+            atom_num = len(data_collection[i]["structure"].species)
+            energies_dft.append(data_collection[i]["energy"] / atom_num - ref_omega_dft)
+            forces_dft += data_collection[i]["forces"]
+            energies_pace.append(
+                data_collection[i]["pace"]["energy"] / atom_num - ref_omega_pace
+            )
+            forces_pace += data_collection[i]["pace"]["forces"].tolist()
+        else:
+            atom_num = len(data_collection[i]["structure"].species)
+            energies_dft_stdt.append(
+                data_collection[i]["energy"] / atom_num - ref_omega_dft
+            )
+            forces_dft_stdt += data_collection[i]["forces"]
+            energies_pace_stdt.append(
+                data_collection[i]["pace"]["energy"] / atom_num - ref_omega_pace
+            )
+            forces_pace_stdt += data_collection[i]["pace"]["forces"].tolist()
     with plt.style.context("science"):
         plt.figure()
-        plt.scatter(energies_dft, energies_pace, c="r", s=0.3)
+        plt.scatter(energies_dft, energies_pace, c="k", s=0.3)
+        plt.scatter(energies_dft_stdt, energies_pace_stdt, c="r", s=0.3)
         plt.xlabel(r"$\Delta E^{DFT} \enspace (eV/atom)$")
         plt.ylabel(r"$\Delta E^{pred} \enspace (eV/atom)$")
         plt.savefig("pace_energy.png", dpi=200)
         plt.close()
+
+    energies_dft += energies_dft_stdt
+    energies_pace += energies_pace_stdt
     RMSE_E = np.sqrt(mean_squared_error(energies_dft, energies_pace))
     MAE_E = mean_absolute_error(energies_dft, energies_pace)
 
     forces_sca_dft = np.sqrt(np.sum(np.array(forces_dft) ** 2, axis=1))
     forces_sca_pace = np.sqrt(np.sum(np.array(forces_pace) ** 2, axis=1))
+    try:
+        forces_sca_dft_stdt = np.sqrt(np.sum(np.array(forces_dft_stdt) ** 2, axis=1))
+        forces_sca_pace_stdt = np.sqrt(np.sum(np.array(forces_pace_stdt) ** 2, axis=1))
+    except:
+        pass
 
     with plt.style.context("science"):
         plt.figure()
-        plt.scatter(forces_sca_dft, forces_sca_pace, c="r", s=0.3, label="pace")
+        plt.scatter(forces_sca_dft, forces_sca_pace, c="k", s=0.3, label="pace")
+        try:
+            plt.scatter(
+                forces_sca_dft_stdt, forces_sca_pace_stdt, c="r", s=0.3, label="pace"
+            )
+        except:
+            pass
         plt.xlabel(r"$|F^{i}|^{DFT} \enspace (eV/Å)$")
         plt.ylabel(r"$|F^{i}|^{pred} \enspace (eV/Å)$")
         plt.savefig("pace_force.png", dpi=200)
         plt.close()
 
+    try:
+        forces_sca_dft += forces_sca_dft_stdt
+        forces_sca_pace += forces_sca_pace_stdt
+    except:
+        pass
+    
     RMSE_F = np.sqrt(mean_squared_error(forces_sca_dft, forces_sca_pace))
     MAE_F = mean_absolute_error(forces_sca_dft, forces_sca_pace)
     Vacancy_formation(data_collection)
