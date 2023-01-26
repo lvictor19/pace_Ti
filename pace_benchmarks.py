@@ -1833,6 +1833,42 @@ def collect_in_powerpoint(
 
     prs.save(pptxname+".pptx")
 
+def calc_energy_weights(energies:np.ndarray,DE:float):
+    '''
+    calculate energy weights
+
+    Parameters
+    ----------
+    energies: DFT energies
+    DE: delta E
+
+    Returns
+    ------
+    energies_weights: Weights for energies
+    '''
+    energies_weights=1/(energies+DE)**2
+    energies_weights=energies_weights/np.sum(energies_weights)
+    return energies_weights
+
+def calc_force_weights(forces:np.ndarray,we_forces:np.ndarray,DF:float):
+    '''
+    calculate force weights
+
+    Parameters
+    ----------
+    forces: DFT forces
+    we_forces: corresponding weight for energy of each force
+    DF: delta F
+
+    Returns
+    -------
+    forces_weights: Weights for forces
+    '''
+
+    forces_weights=1/(forces**2+DF)*we_forces
+    forces_weights=forces_weights/np.sum(forces_weights)
+    return forces_weights
+
 
 def main(pptxname:str='pace'):
     # filename=glob(r'*.json')[0]
@@ -1886,6 +1922,7 @@ def main(pptxname:str='pace'):
     forces_weights_Fwshift_stdt=[]
     training_count=0
     holdout_count=0
+
     for i in tqdm(np.arange(len(data_collection))):
         if not "standout" in data_collection[i].keys():
             atom_num = len(data_collection[i]["structure"].species)
@@ -1898,13 +1935,8 @@ def main(pptxname:str='pace'):
             forces_sca_pace = np.concatenate((forces_sca_pace,np.sqrt(np.sum(data_collection[i]["pace"]["forces"] ** 2, axis=1))))
             if data_collection[i]["pace"]["energy"] / atom_num - ref_omega_pace>20:
                 print(data_collection[i]['metadata'])
-            # Ewshift=1/(data_collection[i]["energy"] / atom_num - ref_omega_dft+DE)**2
-            # energies_weights.append(Ewshift)
             forces_weights_weref.extend([training_count]*atom_num)
             training_count+=1
-            for _ in np.arange(atom_num):
-                Fwshift=1/(fsca_dft[_]**2+DF)
-                forces_weights_Fwshift.append(Fwshift)
         else:
             atom_num = len(data_collection[i]["structure"].species)
             energies_dft_stdt.append(
@@ -1916,31 +1948,20 @@ def main(pptxname:str='pace'):
                 data_collection[i]["pace"]["energy"] / atom_num - ref_omega_pace
             )
             forces_sca_pace_stdt = np.concatenate((forces_sca_pace_stdt,np.sqrt(np.sum(data_collection[i]["pace"]["forces"] ** 2, axis=1))))
-            # Ewshift=1/(data_collection[i]["energy"] / atom_num - ref_omega_dft+DE)**2
-            # energies_weights_stdt.append(Ewshift)
             forces_weights_weref_stdt.extend([holdout_count]*atom_num)
             holdout_count+=1
-            for _ in np.arange(atom_num):
-                Fwshift=1/(fsca_dft_stdt[_]**2+DF)
-                forces_weights_Fwshift_stdt.append(Fwshift)
+
 
     energies_dft=np.array(energies_dft)
-    energies_weights=1/(energies_dft+DE)**2
-    energies_weights=energies_weights/np.sum(energies_weights)
-    forces_weights_weref=np.array(forces_weights_weref).astype(np.int)
+    energies_weights=calc_energy_weights(energies_dft,DE)
     forces_weights_we=energies_weights[forces_weights_weref]
-    forces_weights_Fwshift=np.array(forces_weights_Fwshift)
-    forces_weights=forces_weights_we*forces_weights_Fwshift
-    forces_weights=forces_weights/np.sum(forces_weights)
+    forces_weights=calc_force_weights(forces_sca_dft,forces_weights_we,DF)
 
     energies_dft_stdt=np.array(energies_dft_stdt)
-    energies_weights_stdt=1/(energies_dft_stdt+DE)**2
-    energies_weights_stdt=energies_weights_stdt/np.sum(energies_weights_stdt)
-    forces_weights_weref_stdt=np.array(forces_weights_weref_stdt).astype(np.int)
+    energies_weights_stdt=calc_energy_weights(energies_dft_stdt,DE)
     forces_weights_we_stdt=energies_weights_stdt[forces_weights_weref_stdt]
-    forces_weights_Fwshift_stdt=np.array(forces_weights_Fwshift_stdt)
-    forces_weights_stdt=forces_weights_we_stdt*forces_weights_Fwshift_stdt
-    forces_weights_stdt=forces_weights_stdt/np.sum(forces_weights_stdt)
+    forces_weights_stdt=calc_force_weights(forces_sca_dft_stdt,forces_weights_we_stdt,DF)
+
 
     with plt.style.context("science"):
         plt.figure()
@@ -1968,8 +1989,7 @@ def main(pptxname:str='pace'):
         plt.savefig("pace_energy_low.png", dpi=200)
         plt.close()
 
-    # energies_dft += energies_dft_stdt
-    # energies_pace += energies_pace_stdt
+
     RMSE_E = np.sqrt(np.sum(energies_weights*(np.array(energies_dft)-np.array(energies_pace))**2))
     MAE_E = mean_absolute_error(energies_dft, energies_pace)
     RMSE_E_stdt =np.sqrt(np.sum(energies_weights_stdt*(np.array(energies_dft_stdt)-np.array(energies_pace_stdt))**2))
