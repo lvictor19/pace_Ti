@@ -176,10 +176,10 @@ def get_ref_id(data_collection: list) -> dict:
             and "proto" in data_collection[i]["metadata"]
         ):
             if data_collection[i]["metadata"]["proto"] in [
-                "bcc.vasp",
-                "fcc.vasp",
-                "hcp.vasp",
-                "omega.vasp",
+                "bcc",
+                "fcc",
+                "hcp",
+                "omega",
             ]:
                 ref_id[data_collection[i]["metadata"]["proto"]] = i
     return ref_id
@@ -316,7 +316,6 @@ def volumetric_deformation(
     protos = set()
     for i in volumetric_id:
         protos.add(data_collection[i]["metadata"]["proto"])
-    protos=list(protos)
     with plt.style.context("science"):
         plt.figure()
         for i in np.arange(len(protos)):
@@ -324,7 +323,7 @@ def volumetric_deformation(
             Es_ = []
             Epreds_ = []
             for j in volumetric_id:
-                if data_collection[j]["metadata"]["proto"] == protos[i]:
+                if data_collection[j]["metadata"]["proto"] == list(protos)[i]:
                     Vs_.append(
                         data_collection[j]["metadata"]["volume"]
                         / len(data_collection[j]["structure"].species)
@@ -362,7 +361,7 @@ def volumetric_deformation(
             Es = np.array(Es) - ref_omega_dft
             Epreds = np.array(Epreds) - ref_omega_pace
             order = np.argsort(Vs)
-            label = protos[i]
+            label = list(protos)[i]
             if label in renaming:
                 label = renaming[label]
             plt.scatter(
@@ -389,7 +388,7 @@ def volumetric_deformation(
                 for j in volumetric_id:
                     if (
                         data_collection[j]["metadata"]["proto"]
-                        == protos[i + iter * 6]
+                        == list(protos)[i + iter * 6]
                     ):
                         Vs.append(
                             data_collection[j]["metadata"]["volume"]
@@ -407,7 +406,7 @@ def volumetric_deformation(
                 Es = np.array(Es) - ref_omega_dft
                 Epreds = np.array(Epreds) - ref_omega_pace
                 order = np.argsort(Vs)
-                label = protos[i + iter * 6]
+                label = list(protos)[i + iter * 6]
                 if label in renaming:
                     label = renaming[label]
                 plt.scatter(
@@ -456,10 +455,10 @@ def grain_boundary(data_collection: list):
     for id in gb_id:
         protoid = 0
         if data_collection[id]["metadata"]["ref_elem"] == "Mo":
-            protoid = protoids["bcc.vasp"]
+            protoid = protoids["bcc"]
             protos.append("bcc")
         if data_collection[id]["metadata"]["ref_elem"] == "Ti":
-            protoid = protoids["hcp.vasp"]
+            protoid = protoids["hcp"]
             protos.append("hcp")
         N_gb = len(data_collection[id]["structure"].species)
         M_icsd = len(data_collection[protoid]["structure"].species)
@@ -511,7 +510,7 @@ def surface(data_collection: list):
         if (
             data_collection[i]["metadata"]["perturbation"] == "icsd"
             and data_collection[i]["calc"] == "final"
-        ):  # and data_collection[i]['metadata']['proto']=='bcc.vasp' or data_collection[i]['metadata']['proto']=='hcp.vasp':
+        ):  # and data_collection[i]['metadata']['proto']=='bcc' or data_collection[i]['metadata']['proto']=='hcp':
             icsd_id.append(i)
     protoids = get_ref_id(data_collection)
     deltaEs_sf = []
@@ -710,7 +709,16 @@ def get_whichlines() -> dict:
     ]
     whichlines["pyramidal"] = [
         ("_0", r"$1/3 \enspace [\overline{2} 1 1 0]$"),
-        ("special", r"$1/2 \enspace [0 \overline{1} 1 2]$"),
+        ("special", r"$1/3 \enspace [0 \overline{1} 1 2]$"),
+    ]
+    whichlines["bcc111"] = [
+        ("0_", r"$[\overline{1} 1 0]$"),
+        # ("__s", r"$[\overline{1} 0 1]$"),
+        # ("_-_", r"$[\overline{1} 2 \overline{1}]$"),
+    ]
+    whichlines["pyramidal2nd"] = [
+        ("0_", r"$[0 0 1 1]$"),
+        # ("6_", r"$[0 0 1 1]$"),
     ]
     return whichlines
 
@@ -858,6 +866,8 @@ def plot_interpolated(
         )
         if withline[1] == [0, 0, 1, 0.5]:
             plt.plot([0 - 0.5 * shift, 1 - 1 * shift], [0.5, 1], linewidth=2, c="r")
+        if withline[1] == [0.5, 0, 1, 0.5]:
+            plt.plot([0 - 0.5 * shift, 0.5-1 * shift], [0.5, 1], linewidth=2, c="r")
         plt.savefig("interp_" + name + withline[0] + ".png")
 
 ###### uber fit (only positive cleavages) #####
@@ -877,12 +887,12 @@ def gsfe(data_collection: list, withUber: bool = True,fit_positive=False):
     input data_collection::list
     output pictures of the gamma-surfaces
     """
-    faces = ["bcc100", "bcc110", "fcc100", "fcc111", "basal", "prismatic", "pyramidal"]
-    protos = ["bcc", "bcc", "fcc", "fcc", "hcp", "hcp", "hcp"]
-    planes = ["100", "110", "100", "111", "basal", "prismatic", "pyramidal"]
+    faces = ["bcc100", "bcc110", "fcc100", "fcc111", "basal", "prismatic", "pyramidal","bcc111","pyramidal2nd"]
+    protos = ["bcc", "bcc", "fcc", "fcc", "hcp", "hcp", "hcp","bcc","hcp"]
+    planes = ["100", "110", "100", "111", "basal", "prismatic", "pyramidal","111","pyramidal2nd"]
 
-    shifts = [0, 1 / 3, 0, 0.5, 0.5, 0, 0.1427]
-    fracs = [0.0385, 0.044, 0.040, 0.041, 0.041, 0.039, 0.024]
+    shifts = [0, 1 / 3, 0, 0.5, 0.5, 0, 0.1427,0.5,0]
+    fracs = [0.0385, 0.044, 0.040, 0.041, 0.041, 0.039, 0.024,0.047,0.037]
     aspect_vals = [
         1,
         np.sqrt(2) * 2 / 3,
@@ -891,6 +901,8 @@ def gsfe(data_collection: list, withUber: bool = True,fit_positive=False):
         np.sqrt(3) / 2,
         1.585,
         0.5146,
+        np.sqrt(3)/2,
+        0.924,
     ]
     xtexts = [
         r"$[100]$",
@@ -900,6 +912,8 @@ def gsfe(data_collection: list, withUber: bool = True,fit_positive=False):
         r"$1/3 \enspace [1 1 \overline{2} 1]$",
         r"$1/3 \enspace [1 1 \overline{2} 0]$",
         r"$1/3 \enspace [1 \overline{2} 1 3]$",
+        r'$[\overline{1} 1 0]$',
+        r'$[0 0 1 1]$'
     ]
     ytexts = [
         r"$[010]$",
@@ -909,6 +923,8 @@ def gsfe(data_collection: list, withUber: bool = True,fit_positive=False):
         r"$[\overline{1} 1 0 0]$",
         r"$[0001]$",
         r"$1/3 \enspace [\overline{2} 1 1 0]$",
+        r'$[0 \overline{1} 1]$',
+        r'$[ \overline{1} 1 0 0]$'
     ]
     # xlabel x y yalbel x y rot colorbar
     text_poses = [
@@ -919,6 +935,8 @@ def gsfe(data_collection: list, withUber: bool = True,fit_positive=False):
         [0.38, -0.15, -0.46, 0.33, 120, 1.12, 1.03],
         [0.32, -0.12, -0.19, 0.45, 90, 1.18, 1.00],
         [0.38, -0.2, -0.24, 0.23, 105.5, 1.08, 1.04],
+        [0.42, -0.13, -0.44,0.36, 120, 1.12,1.03],
+        [0.32,-0.1, -0.18,0.45, 90, 1.18,1.00],
     ]
     # xtickshift ytickshift
     tick_poses = [
@@ -929,15 +947,20 @@ def gsfe(data_collection: list, withUber: bool = True,fit_positive=False):
         [0.04, 0.06, 0.09, 0.04],
         [0.04, 0.05, 0.11, 0.02],
         [0.04, 0.09, 0.07, 0.03],
+        [0.04, 0.05, 0.08, 0.03],
+        [0.04, 0.05, 0.10, 0.02],
+
     ]
 
     whichlines = get_whichlines()
-    for whichface in np.arange(7):
+    for whichface in np.arange(9):
+        if whichface!=8:
+            continue
         face = faces[whichface]
         with open(face + "record.json") as f:
-            record = json.loads(f.read())
+            shift_record = json.loads(f.read())
         equivalents = []
-        for equi1 in record["equivalents"]:
+        for equi1 in shift_record["equivalents"]:
             equi_orbit = []
             for equi2 in equi1:
                 if equi2.endswith("0.000000"):
@@ -957,8 +980,8 @@ def gsfe(data_collection: list, withUber: bool = True,fit_positive=False):
                 and data["metadata"]["perturbation"] == "gsfe"
                 and data["metadata"]["proto"] == protos[whichface]
                 and data["metadata"]["plane"] == planes[whichface]
-                and data["metadata"]["shift0"] == 0
-                and data["metadata"]["shift1"] == 0
+                and data["metadata"]["shifts"][0] == 0
+                and data["metadata"]["shifts"][1] == 0
                 and data["metadata"]["cleavage"] == 0
                 and not "relax" in data["metadata"]
             ):
@@ -975,8 +998,8 @@ def gsfe(data_collection: list, withUber: bool = True,fit_positive=False):
                     and data["metadata"]["perturbation"] == "gsfe"
                     and data["metadata"]["proto"] == protos[whichface]
                     and data["metadata"]["plane"] == planes[whichface]
-                    and data["metadata"]["shift0"] == int(first.split(".")[0])
-                    and data["metadata"]["shift1"] == int(first.split(".")[1])
+                    and data["metadata"]["shifts"][0] == int(first.split(".")[0])
+                    and data["metadata"]["shifts"][1] == int(first.split(".")[1])
                     and not "relax" in data["metadata"]
                 ):
                     cleaves.append(data["metadata"]["cleavage"])
@@ -990,28 +1013,51 @@ def gsfe(data_collection: list, withUber: bool = True,fit_positive=False):
             index = np.argsort(cleaves)
             energies_pace = cleave_energies_pace[index]
             energies_dft = cleave_energies_dft[index]
-            record = load_record("./" + faces[whichface] + "_cleave_record.json")
-            unwinded_dft = tabulize_record(record)
-            unwinded_pace = tabulize_record(record)
-            avec, bvec = in_plane_vectors(record)
+            cleave_record = load_record("./" +face+ "_cleave_record.json")
+            unwinded_dft = tabulize_record(cleave_record)
+            unwinded_pace = tabulize_record(cleave_record)
+            cleaves_original=np.array([-0.15, -0.1, -0.05, 0.0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 3.5, 4.0, 6.0, 8.0])
+            # cleave_min=min(cleaves)
+            # argcleave=np.where(cleaves_original==cleave_min)[0]
+            # if argcleave>0:
+            #     to_drop=['0:0:%.6f'%cleaves_original[_] for _ in np.arange(argcleave)]
+            #     unwinded_dft=unwinded_dft.drop(to_drop)
+            #     unwinded_pace=unwinded_pace.drop(to_drop)
+            if len(cleaves)<26:
+                to_drop=['0:0:%.6f'%cleaves_orig for cleaves_orig in cleaves_original if not cleaves_orig in cleaves]
+                unwinded_dft=unwinded_dft.drop(to_drop)
+                unwinded_pace=unwinded_pace.drop(to_drop)
+
+            unwinded_dft=unwinded_dft.sort_values(["cleavage"])
+            unwinded_pace=unwinded_pace.sort_values(["cleavage"])
+            
+            avec, bvec = in_plane_vectors(shift_record)
             energies_pace = [
                 transform_energy_to_surface_energy(e, avec, bvec) for e in energies_pace
             ]
             energies_dft = [
                 transform_energy_to_surface_energy(e, avec, bvec) for e in energies_dft
             ]
+            # if not len(unwinded_dft)==len(energies_dft)==len(energies_pace):
+            #     print(faces[whichface],'_',first,'_',len(unwinded_dft),'_',energies_dft,'_',energies_pace)
+            # try:
+            #     unwinded_pace["energy"] = energies_pace
+            # except:
+                # print(faces[whichface],'_',first,'_',argcleave.sort(),'_',len(unwinded_dft),'_',len(energies_dft),'_',len(energies_pace))
+                # print(cleave_min)
+                # print(cleaves)
             unwinded_pace["energy"] = energies_pace
             unwinded_dft["energy"] = energies_dft
             unwinded_slice_pace = shift_energies_to_surface_energy(
                 unwinded_pace, eqe_pace
             )
             unwinded_slice_dft = shift_energies_to_surface_energy(unwinded_dft, eqe_dft)
-            try: 
+            try:
                 popt_pace, pcov_pace = uber_fit(unwinded_slice_pace)
                 popt_dft, pcov_dft = uber_fit(unwinded_slice_dft)
             except:
                 pass
-            if fit_positive==True and whichface==0 and int(first.split(".")[0])>=5:
+            if fit_positive==True:
                 popt_pace, pcov_pace = uber_fit_positive(unwinded_slice_pace)
                 popt_dft, pcov_dft = uber_fit_positive(unwinded_slice_dft)                
             if withUber == True:
@@ -1020,9 +1066,21 @@ def gsfe(data_collection: list, withUber: bool = True,fit_positive=False):
             else:
                 value_pace = energies_pace[3]
                 value_dft = energies_dft[3]
-            if whichface == 0 and int(first.split(".")[0]) >= 5:
+            # if (
+            #     planes[whichface] == 'pyramidal2nd'
+            #     and int(first.split(".")[0]) == 0
+            #     and int(first.split(".")[1]) == 5
+            # ):
+            #     print(value_pace)
+            #     print(value_dft)
+            
+            if planes[whichface] == 'pyramidal2nd' and int(first.split(".")[0]) == 0 and int(first.split(".")[1]) == 5:
+                print(avec)
+                print(bvec)
                 fig = plt.figure()
                 ax = fig.add_subplot(111)
+                unwinded_slice_pace=unwinded_slice_pace.sort_values(["cleavage"])
+                print(unwinded_slice_pace["cleavage"])
                 deltas = np.linspace(
                     min(unwinded_slice_pace["cleavage"]),
                     max(unwinded_slice_pace["cleavage"]),
@@ -1043,8 +1101,37 @@ def gsfe(data_collection: list, withUber: bool = True,fit_positive=False):
                     + first.split(".")[0]
                     + "_"
                     + first.split(".")[1]
-                    + ".png"
+                    + "_pace.png"
                 )
+                plt.close()
+                fig = plt.figure()
+                ax = fig.add_subplot(111)
+                unwinded_slice_dft=unwinded_slice_dft.sort_values(["cleavage"])
+                print(unwinded_slice_dft["cleavage"])
+                deltas = np.linspace(
+                    min(unwinded_slice_dft["cleavage"]),
+                    max(unwinded_slice_dft["cleavage"]),
+                    1000,
+                )
+                fitenergy = uber(deltas, *popt_dft)
+                ax.plot(deltas, fitenergy - popt_dft[3], "g--", color="k", zorder=1)
+                ax.scatter(
+                    unwinded_slice_dft["cleavage"],
+                    unwinded_slice_dft["energy"] - popt_dft[3],
+                    zorder=2,
+                )
+                ax.set_xlabel("$d$ $\mathrm{[\AA]}$")
+                ax.set_ylabel("Energy $\mathrm{[J/m^2]}$")
+                plt.tight_layout()
+                plt.savefig(
+                    "Uberplot"
+                    + first.split(".")[0]
+                    + "_"
+                    + first.split(".")[1]
+                    + "_dft.png"
+                )
+                plt.close()
+
             for j in np.arange(len(equivalents[i])):
                 which = equivalents[i][j].split(".")
                 values_pace[int(which[0]), int(which[1])] = value_pace
@@ -1110,6 +1197,25 @@ def gsfe(data_collection: list, withUber: bool = True,fit_positive=False):
                     tick_poses[whichface],
                     (line[0], [0, 0.05, 1, 0.05]),
                 )
+            elif line[0] == "6_":
+                plotlinescan(
+                    values_pace[6, :],
+                    values_dft[6, :],
+                    faces[whichface] + "-" + "linescan6_.png",
+                    line[1],
+                )
+                plot_interpolated(
+                    faces[whichface],
+                    values_pace,
+                    shifts[whichface],
+                    fracs[whichface],
+                    aspect_vals[whichface],
+                    xtexts[whichface],
+                    ytexts[whichface],
+                    text_poses[whichface],
+                    tick_poses[whichface],
+                    (line[0], [0, 0.5, 1, 0.5]),
+                )
             elif line[0] == "_0":
                 plotlinescan(
                     values_pace[:, 0],
@@ -1147,6 +1253,31 @@ def gsfe(data_collection: list, withUber: bool = True,fit_positive=False):
                     text_poses[whichface],
                     tick_poses[whichface],
                     (line[0], [0, 0, 1, 1]),
+                )
+            elif line[0] == "__s":
+                plotlinescan(
+                    values_pace[
+                        np.array([6,7,8,9,10,11,12,0,1,2,3,4,5]),
+                        np.arange(13),
+                    ],
+                    values_dft[
+                        np.array([6,7,8,9,10,11,12,0,1,2,3,4,5]),
+                        np.arange(13),
+                    ],
+                    faces[whichface] + "-" + "linescan__s.png",
+                    line[1],
+                )
+                plot_interpolated(
+                    faces[whichface],
+                    values_pace,
+                    shifts[whichface],
+                    fracs[whichface],
+                    aspect_vals[whichface],
+                    xtexts[whichface],
+                    ytexts[whichface],
+                    text_poses[whichface],
+                    tick_poses[whichface],
+                    (line[0], [0.5,0, 1, 0.5]),
                 )
             elif line[0] == "_-_":
                 plotlinescan(
@@ -1201,18 +1332,18 @@ def burgers_bains(data_collection: list):
     B_B_id = []
     for i in np.arange(len(data_collection)):
         if (
-            data_collection[i]["metadata"]["perturbation"] == "Burgers_Bains"
-            and data_collection[i]["metadata"]["value"][:3] in ["sh_", "sp_", "sn_"]
-            # and data_collection[i]["calc"] == "final"
+            data_collection[i]["metadata"]["perturbation"] == "pathways"
+            and data_collection[i]["calc"] == "final"
         ):
-            B_B_id.append(i)
+            if data_collection[i]['metadata']['pathway_label']=="Burgers_Bain":
+                B_B_id.append(i)
     bccref_pace = 0
     bccref_dft = 0
     for data in data_collection:
         if (
             data["metadata"]["perturbation"] == "icsd"
             and data["calc"] == "final"
-            and data["metadata"]["proto"] == "bcc.vasp"
+            and data["metadata"]["proto"] == "bcc"
         ):
             bccref_pace = data["pace"]["energy"] / len(data["structure"])
             bccref_dft = data["energy"] / len(data["structure"])
@@ -1227,10 +1358,9 @@ def burgers_bains(data_collection: list):
     shuffled_energies_pace = []
 
     for id in B_B_id:
-        if "sh" in data_collection[id]["metadata"]["value"]:
-            symbol = 1 if "p" in data_collection[id]["metadata"]["value"] else -1
+        if data_collection[id]["metadata"]["shuffled"]==True:
             shuffled_values.append(
-                symbol * float(data_collection[id]["metadata"]["value"].split("_")[-1])
+                data_collection[id]["metadata"]["value"]
             )
             shuffled_energies_dft.append(
                 float(data_collection[id]["energy"])
@@ -1243,9 +1373,8 @@ def burgers_bains(data_collection: list):
                 - bccref_pace
             )
         else:
-            symbol = 1 if "p" in data_collection[id]["metadata"]["value"] else -1
             unshuffled_values.append(
-                symbol * float(data_collection[id]["metadata"]["value"].split("_")[-1])
+                data_collection[id]["metadata"]["value"]
             )
             unshuffled_energies_dft.append(
                 float(data_collection[id]["energy"])
@@ -1276,6 +1405,7 @@ def burgers_bains(data_collection: list):
     shuffled_energies_dft = shuffled_energies_dft[shuffled_index]
     shuffled_energies_pace = shuffled_energies_pace[shuffled_index]
 
+    # print(shuffled_values)
     with plt.style.context("science"):
         plt.figure(figsize=(5, 4))
         plt.scatter(
@@ -1310,10 +1440,11 @@ def bcc_omega(data_collection: list, ref_omega_dft: float, ref_omega_pace: float
     b_o_id = []
     for i in np.arange(len(data_collection)):
         if (
-            data_collection[i]["metadata"]["perturbation"] == "bcc_omega"
+            data_collection[i]["metadata"]["perturbation"] == "pathways"
             and data_collection[i]["calc"] == "final"
         ):
-            b_o_id.append(i)
+            if data_collection[i]["metadata"]["pathway_label"] == "bcc_omega":
+                b_o_id.append(i)
     values = []
     Energies_dft = []
     Energies_pace = []
@@ -1362,29 +1493,30 @@ def hcp_omega(data_collection: list):
     """
     h_o_static_id = []
     for i in np.arange(len(data_collection)):
-        if data_collection[i]["metadata"]["perturbation"] == "hcp_omega":
-            if (
-                "NEB" in data_collection[i]["metadata"].keys()
-                and data_collection[i]["metadata"]["NEB"] == "False"
-            ):
-                h_o_static_id.append(i)
+        if (
+            data_collection[i]["metadata"]["perturbation"] == "pathways"
+            and data_collection[i]["metadata"]["pathway_label"] == "hcp_omega"
+            and data_collection[i]["metadata"]["SSNEB"] == False
+        ):
+            h_o_static_id.append(i)
 
     h_o_NEB_id = []
     for i in np.arange(len(data_collection)):
-        if data_collection[i]["metadata"]["perturbation"] == "hcp_omega":
-            if (
-                "NEB" in data_collection[i]["metadata"].keys()
-                and data_collection[i]["metadata"]["NEB"] == "True"
-            ):
-                h_o_NEB_id.append(i)
+        if (
+            data_collection[i]["metadata"]["perturbation"] == "pathways"
+            and data_collection[i]["metadata"]["pathway_label"] == "hcp_omega"
+            and data_collection[i]["metadata"]["SSNEB"] == True
+        ):
+            h_o_NEB_id.append(i)
     hcp_energy_pace = 0
     omega_energy_pace = 0
     hcp_energy_dft = 0
     omega_energy_dft = 0
     for i in np.arange(len(data_collection)):
         if (
-            data_collection[i]["metadata"]["perturbation"] == "hcp_omega"
+            data_collection[i]["metadata"]["perturbation"] == "icsd"
             and data_collection[i]["metadata"]["proto"] == "hcp"
+            and data_collection[i]["calc"] == "final"
         ):
             hcp_energy_dft = data_collection[i]["energy"] / len(
                 data_collection[i]["structure"]
@@ -1393,8 +1525,9 @@ def hcp_omega(data_collection: list):
                 data_collection[i]["structure"]
             )
         if (
-            data_collection[i]["metadata"]["perturbation"] == "hcp_omega"
+            data_collection[i]["metadata"]["perturbation"] == "icsd"
             and data_collection[i]["metadata"]["proto"] == "omega"
+            and data_collection[i]["calc"] == "final"
         ):
             omega_energy_dft = data_collection[i]["energy"] / len(
                 data_collection[i]["structure"]
@@ -1404,7 +1537,7 @@ def hcp_omega(data_collection: list):
             )
     pathways = set()
     for id in h_o_static_id:
-        pathways.add(data_collection[id]["metadata"]["#pathway"])
+        pathways.add(data_collection[id]["metadata"]["pathway_number"])
     pathways = list(pathways)
 
     for pathway in pathways:
@@ -1417,10 +1550,11 @@ def hcp_omega(data_collection: list):
         for image in np.arange(1, 6, 1):
             for i in np.arange(len(data_collection)):
                 if (
-                    "NEB" in data_collection[i]["metadata"]
-                    and data_collection[i]["metadata"]["perturbation"] == "hcp_omega"
-                    and data_collection[i]["metadata"]["NEB"] == "False"
-                    and data_collection[i]["metadata"]["#pathway"] == pathway
+                    "SSNEB" in data_collection[i]["metadata"]
+                    and data_collection[i]["metadata"]["perturbation"] == "pathways"
+                    and data_collection[i]["metadata"]["pathway_label"] == "hcp_omega"
+                    and data_collection[i]["metadata"]["SSNEB"] == False
+                    and data_collection[i]["metadata"]["pathway_number"] == pathway
                     and int(data_collection[i]["metadata"]["image"]) == image
                 ):
                     energies_pace[image] = data_collection[i]["pace"]["energy"] / len(
@@ -1441,10 +1575,11 @@ def hcp_omega(data_collection: list):
         for image in np.arange(1, 6, 1):
             for i in np.arange(len(data_collection)):
                 if (
-                    "NEB" in data_collection[i]["metadata"]
-                    and data_collection[i]["metadata"]["perturbation"] == "hcp_omega"
-                    and data_collection[i]["metadata"]["NEB"] == "True"
-                    and data_collection[i]["metadata"]["#pathway"] == pathway
+                    "SSNEB" in data_collection[i]["metadata"]
+                    and data_collection[i]["metadata"]["perturbation"] == "pathways"
+                    and data_collection[i]["metadata"]["pathway_label"] == "hcp_omega"
+                    and data_collection[i]["metadata"]["SSNEB"] == True
+                    and data_collection[i]["metadata"]["pathway_number"] == pathway
                     and int(data_collection[i]["metadata"]["image"]) == image
                 ):
                     energies_pace_NEB[image] = data_collection[i]["pace"][
@@ -1533,7 +1668,7 @@ def phonos(data_collection: list):
 
 
 def collect_in_powerpoint(
-    data_collection:list, RMSE_E: float,RMSE_E_stdt: float, MAE_E: float,MAE_E_stdt: float, RMSE_F: float,RMSE_F_stdt: float, MAE_F: float,MAE_F_stdt: float, pptxname:str="pace" 
+    data_collection:list, RMSE_E: float, MAE_E: float, RMSE_F: float, MAE_F: float, pptxname:str="pace" 
 ):
     """
     collect things in a powerpoint file
@@ -1555,13 +1690,9 @@ def collect_in_powerpoint(
     p0 = tf.add_paragraph()
     p0.text = ""
     p1 = tf.add_paragraph()
-    p1.text = "RMSE(training)=%.5f" % RMSE_E
+    p1.text = "RMSE=%.5f" % RMSE_E
     p2 = tf.add_paragraph()
-    p2.text = "MAE(training)=%.5f" % MAE_E
-    p3 = tf.add_paragraph()
-    p3.text = "RMSE(holdout)=%.5f" % RMSE_E_stdt
-    p4 = tf.add_paragraph()
-    p4.text = "MAE(holdout)=%.5f" % MAE_E_stdt
+    p2.text = "MAE=%.5f" % MAE_E
     img_path = "pace_energy.png"
     picleft = Inches(3)
     picheight = Inches(5.5)
@@ -1585,13 +1716,9 @@ def collect_in_powerpoint(
     p0 = tf.add_paragraph()
     p0.text = ""
     p1 = tf.add_paragraph()
-    p1.text = "RMSE(training)=%.5f" % RMSE_F
+    p1.text = "RMSE=%.5f" % RMSE_F
     p2 = tf.add_paragraph()
-    p2.text = "MAE(training)=%.5f" % MAE_F
-    p3 = tf.add_paragraph()
-    p3.text = "RMSE(holdout)=%.5f" % RMSE_F_stdt
-    p4 = tf.add_paragraph()
-    p4.text = "MAE(holdout))=%.5f" % MAE_F_stdt
+    p2.text = "MAE=%.5f" % MAE_F
     img_path = "pace_force.png"
     picleft = Inches(3)
     picheight = Inches(5.5)
@@ -1722,7 +1849,7 @@ def collect_in_powerpoint(
         picheight = Inches(5.5)
         pic = slide.shapes.add_picture(img_path, picleft, top, height=picheight)
 
-    faces = ["bcc100", "bcc110", "fcc100", "fcc111", "basal", "prismatic", "pyramidal"]
+    faces = ["bcc100", "bcc110", "fcc100", "fcc111", "basal", "prismatic", "pyramidal","bcc111","pyramidal2nd"]
     for face in faces:
         slide = prs.slides.add_slide(blank_slide_layout)
         left = top = width = height = Inches(1)
@@ -1761,7 +1888,10 @@ def collect_in_powerpoint(
     linescans4 = [l for l in linescans_ if "fcc111" in l]
     linescans5 = [l for l in linescans_ if "basal" in l]
     linescans6 = [l for l in linescans_ if "prismatic" in l]
-    linescans7 = [l for l in linescans_ if "pyramidal" in l]
+    linescans7 = [l for l in linescans_ if "pyramidal" in l and "2nd" not in l]
+    linescans8 = [l for l in linescans_ if "bcc111" in l]
+    linescans9 = [l for l in linescans_ if "pyramidal2nd" in l]
+
     # linescans = (
     #     linescans1
     #     + linescans2
@@ -1771,7 +1901,7 @@ def collect_in_powerpoint(
     #     + linescans6
     #     + linescans7
     # )
-
+    print(linescans7)
     facenames = [
         "bcc100",
         "bcc110",
@@ -1780,9 +1910,11 @@ def collect_in_powerpoint(
         "basal",
         "prismatic",
         "pyramidal",
+        "bcc111",
+        "pyramidal2nd"
     ]
     names = locals()
-    for i in np.arange(1, 8, 1):
+    for i in np.arange(1, 10, 1):
         for linescan in names["linescans" + str(i)]:
             slide = prs.slides.add_slide(blank_slide_layout)
             left = top = width = height = Inches(1)
@@ -1833,42 +1965,6 @@ def collect_in_powerpoint(
 
     prs.save(pptxname+".pptx")
 
-def calc_energy_weights(energies:np.ndarray,DE:float):
-    '''
-    calculate energy weights
-
-    Parameters
-    ----------
-    energies: DFT energies
-    DE: delta E
-
-    Returns
-    ------
-    energies_weights: Weights for energies
-    '''
-    energies_weights=1/(energies+DE)**2
-    energies_weights=energies_weights/np.sum(energies_weights)
-    return energies_weights
-
-def calc_force_weights(forces:np.ndarray,we_forces:np.ndarray,DF:float):
-    '''
-    calculate force weights
-
-    Parameters
-    ----------
-    forces: DFT forces
-    we_forces: corresponding weight for energy of each force
-    DF: delta F
-
-    Returns
-    -------
-    forces_weights: Weights for forces
-    '''
-
-    forces_weights=1/(forces**2+DF)*we_forces
-    forces_weights=forces_weights/np.sum(forces_weights)
-    return forces_weights
-
 
 def main(pptxname:str='pace'):
     # filename=glob(r'*.json')[0]
@@ -1877,7 +1973,7 @@ def main(pptxname:str='pace'):
         data_collection_ = json.loads(f.read(), cls=MontyDecoder)
     data_collection = []
     for data in data_collection_:
-        # if data["metadata"]["perturbation"] != "pairs":
+        if data["metadata"]["perturbation"] != "pairs":
             data_collection.append(data)
     del data_collection_
 
@@ -1887,7 +1983,7 @@ def main(pptxname:str='pace'):
         if (
             data["metadata"]["perturbation"] == "icsd"
             and data["calc"] == "final"
-            and data["metadata"]["proto"] == "omega.vasp"
+            and data["metadata"]["proto"] == "omega"
         ):
             ref_omega_dft = data["energy"]
     ref_omega_dft = ref_omega_dft / 3
@@ -1897,71 +1993,42 @@ def main(pptxname:str='pace'):
         if (
             data["metadata"]["perturbation"] == "icsd"
             and data["calc"] == "final"
-            and data["metadata"]["proto"] == "omega.vasp"
+            and data["metadata"]["proto"] == "omega"
         ):
             ref_omega_pace = data["pace"]["energy"]
     ref_omega_pace = ref_omega_pace / 3
 
     #####evaluate energy and force prediction#####
-    DE=1
-    DF=1
     energies_dft = []
+    forces_dft = []
     energies_pace = []
-    forces_sca_dft = np.array([])
-    forces_sca_pace = np.array([])
-    energies_weights=[]
-    forces_weights_weref=[]
-    forces_weights_Fwshift=[]
+    forces_pace = []
 
     energies_dft_stdt = []
+    forces_dft_stdt = []
     energies_pace_stdt = []
-    forces_sca_dft_stdt = np.array([])
-    forces_sca_pace_stdt = np.array([])
-    energies_weights_stdt=[]
-    forces_weights_weref_stdt=[]
-    forces_weights_Fwshift_stdt=[]
-    training_count=0
-    holdout_count=0
-
+    forces_pace_stdt = []
     for i in tqdm(np.arange(len(data_collection))):
         if not "standout" in data_collection[i].keys():
             atom_num = len(data_collection[i]["structure"].species)
             energies_dft.append(data_collection[i]["energy"] / atom_num - ref_omega_dft)
-            fsca_dft=np.sqrt(np.sum(np.array(data_collection[i]["forces"]) ** 2, axis=1))
-            forces_sca_dft=np.concatenate((forces_sca_dft,fsca_dft))
+            forces_dft += data_collection[i]["forces"]
             energies_pace.append(
                 data_collection[i]["pace"]["energy"] / atom_num - ref_omega_pace
             )
-            forces_sca_pace = np.concatenate((forces_sca_pace,np.sqrt(np.sum(data_collection[i]["pace"]["forces"] ** 2, axis=1))))
+            forces_pace += data_collection[i]["pace"]["forces"].tolist()
             if data_collection[i]["pace"]["energy"] / atom_num - ref_omega_pace>20:
                 print(data_collection[i]['metadata'])
-            forces_weights_weref.extend([training_count]*atom_num)
-            training_count+=1
         else:
             atom_num = len(data_collection[i]["structure"].species)
             energies_dft_stdt.append(
                 data_collection[i]["energy"] / atom_num - ref_omega_dft
             )
-            fsca_dft_stdt=np.sqrt(np.sum(np.array(data_collection[i]["forces"]) ** 2, axis=1))
-            forces_sca_dft_stdt = np.concatenate((forces_sca_dft_stdt,fsca_dft_stdt))
+            forces_dft_stdt += data_collection[i]["forces"]
             energies_pace_stdt.append(
                 data_collection[i]["pace"]["energy"] / atom_num - ref_omega_pace
             )
-            forces_sca_pace_stdt = np.concatenate((forces_sca_pace_stdt,np.sqrt(np.sum(data_collection[i]["pace"]["forces"] ** 2, axis=1))))
-            forces_weights_weref_stdt.extend([holdout_count]*atom_num)
-            holdout_count+=1
-
-
-    energies_dft=np.array(energies_dft)
-    energies_weights=calc_energy_weights(energies_dft,DE)
-    forces_weights_we=energies_weights[forces_weights_weref]
-    forces_weights=calc_force_weights(forces_sca_dft,forces_weights_we,DF)
-
-    energies_dft_stdt=np.array(energies_dft_stdt)
-    energies_weights_stdt=calc_energy_weights(energies_dft_stdt,DE)
-    forces_weights_we_stdt=energies_weights_stdt[forces_weights_weref_stdt]
-    forces_weights_stdt=calc_force_weights(forces_sca_dft_stdt,forces_weights_we_stdt,DF)
-
+            forces_pace_stdt += data_collection[i]["pace"]["forces"].tolist()
 
     with plt.style.context("science"):
         plt.figure()
@@ -1971,7 +2038,7 @@ def main(pptxname:str='pace'):
         )
         plt.xlabel(r"$\Delta E^{DFT} \enspace (eV/atom)$")
         plt.ylabel(r"$\Delta E^{pred} \enspace (eV/atom)$")
-        plt.legend()
+        # plt.legend()
         plt.savefig("pace_energy.png", dpi=200)
         plt.close()
 
@@ -1985,16 +2052,22 @@ def main(pptxname:str='pace'):
         plt.ylabel(r"$\Delta E^{pred} \enspace (eV/atom)$")
         plt.xlim([0, 2])
         plt.ylim([0, 2])
-        plt.legend()
+        # plt.legend()
         plt.savefig("pace_energy_low.png", dpi=200)
         plt.close()
 
-
-    RMSE_E = np.sqrt(np.sum(energies_weights*(np.array(energies_dft)-np.array(energies_pace))**2))
+    energies_dft += energies_dft_stdt
+    energies_pace += energies_pace_stdt
+    RMSE_E = np.sqrt(mean_squared_error(energies_dft, energies_pace))
     MAE_E = mean_absolute_error(energies_dft, energies_pace)
-    RMSE_E_stdt =np.sqrt(np.sum(energies_weights_stdt*(np.array(energies_dft_stdt)-np.array(energies_pace_stdt))**2))
-    MAE_E_stdt = mean_absolute_error(energies_dft_stdt, energies_pace_stdt)
 
+    forces_sca_dft = np.sqrt(np.sum(np.array(forces_dft) ** 2, axis=1))
+    forces_sca_pace = np.sqrt(np.sum(np.array(forces_pace) ** 2, axis=1))
+    try:
+        forces_sca_dft_stdt = np.sqrt(np.sum(np.array(forces_dft_stdt) ** 2, axis=1))
+        forces_sca_pace_stdt = np.sqrt(np.sum(np.array(forces_pace_stdt) ** 2, axis=1))
+    except:
+        pass
 
     with plt.style.context("science"):
         plt.figure()
@@ -2007,7 +2080,7 @@ def main(pptxname:str='pace'):
             pass
         plt.xlabel(r"$|F^{i}|^{DFT} \enspace (eV/Å)$")
         plt.ylabel(r"$|F^{i}|^{pred} \enspace (eV/Å)$")
-        plt.legend()
+        # plt.legend()
         plt.savefig("pace_force.png", dpi=200)
         plt.close()
 
@@ -2022,40 +2095,39 @@ def main(pptxname:str='pace'):
             pass
         plt.xlabel(r"$|F^{i}|^{DFT} \enspace (eV/Å)$")
         plt.ylabel(r"$|F^{i}|^{pred} \enspace (eV/Å)$")
-        plt.legend()
+        # plt.legend()
         plt.xlim([0, 10])
         plt.ylim([0, 10])
         plt.savefig("pace_force_low.png", dpi=200)
         plt.close()
 
-    # try:
-    #     forces_sca_dft += forces_sca_dft_stdt
-    #     forces_sca_pace += forces_sca_pace_stdt
-    # except:
-    #     pass
-    RMSE_F = np.sqrt(np.sum(forces_weights*(np.array(forces_sca_dft)-np.array(forces_sca_pace))**2))
+    try:
+        forces_sca_dft += forces_sca_dft_stdt
+        forces_sca_pace += forces_sca_pace_stdt
+    except:
+        pass
+
+    RMSE_F = np.sqrt(mean_squared_error(forces_sca_dft, forces_sca_pace))
     MAE_F = mean_absolute_error(forces_sca_dft, forces_sca_pace)
-    RMSE_F_stdt = np.sqrt(np.sum(forces_weights_stdt*(np.array(forces_sca_dft_stdt)-np.array(forces_sca_pace_stdt))**2))
-    MAE_F_stdt = mean_absolute_error(forces_sca_dft_stdt, forces_sca_pace_stdt)
-    # vacancy_formation(data_collection)
-    # print('Vacancy')
-    # volumetric_deformation(data_collection, ref_omega_dft, ref_omega_pace)
-    # print('Volumetric')
-    # grain_boundary(data_collection)
-    # print('Grain Boundary')
-    # surface(data_collection)
-    # print('Surface')
-    # gsfe(data_collection,withUber=True,fit_positive=False)
-    # print('Stacking Fault Energy')
-    # burgers_bains(data_collection)
-    # bcc_omega(data_collection, ref_omega_dft, ref_omega_pace)
-    # hcp_omega(data_collection)
-    # print('Pathway')
-    # strain(data_collection, ref_omega_dft, ref_omega_pace)
-    # print('Strain')
-    # phonos(data_collection)
-    # print('phonons')
-    collect_in_powerpoint(data_collection, RMSE_E,RMSE_E_stdt, MAE_E,MAE_E_stdt, RMSE_F,RMSE_F_stdt, MAE_F,MAE_F_stdt,pptxname)
+    vacancy_formation(data_collection)
+    print('Vacancy')
+    volumetric_deformation(data_collection, ref_omega_dft, ref_omega_pace)
+    print('Volumetric')
+    grain_boundary(data_collection)
+    print('Grain Boundary')
+    surface(data_collection)
+    print('Surface')
+    gsfe(data_collection,withUber=False,fit_positive=False)
+    print('Stacking Fault Energy')
+    burgers_bains(data_collection)
+    bcc_omega(data_collection, ref_omega_dft, ref_omega_pace)
+    hcp_omega(data_collection)
+    print('Pathway')
+    strain(data_collection, ref_omega_dft, ref_omega_pace)
+    print('Strain')
+    phonos(data_collection)
+    print('phonons')
+    collect_in_powerpoint(data_collection, RMSE_E, MAE_E, RMSE_F, RMSE_F,pptxname)
 
 
 ######  python {python program name}  {output pptx filename without .pptx} ######
