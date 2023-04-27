@@ -61,7 +61,7 @@ def reference_energies(data_collection:pd.DataFrame,reference_energies:dict):
         data_collection[ref_e]=data_collection[ref_e]/data_collection['ase_atoms'].map(lambda x:len(x))-reference_energies[ref_e]
     return data_collection
 
-def plot_burgers_bain(ax,shuffled_referenced:pd.DataFrame,unshuffled_referenced:pd.DataFrame,key,**kwargs):
+def plot_burgers_bain(ax,shuffled_referenced:pd.DataFrame,unshuffled_referenced:pd.DataFrame,key):
     '''
     plot burger_bain pathway energy profile
     key : key in the dataframe for the pace energy
