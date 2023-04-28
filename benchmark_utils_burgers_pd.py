@@ -4,18 +4,20 @@ import pandas as pd
 from matplotlib import pyplot as plt
 import scienceplots
 
-def get_icsd_ref_energy(dataset:pd.DataFrame,protoname:str,which)->float:
+def get_icsd_ref_energy(dataset:pd.DataFrame,protoname:str,key:str)->float:
     '''
     get the reference energy per atom for a prototype
+    key : str 
+        key in the dataframe
     '''
     isfinal=dataset['calc'].map(lambda x: x=='final')
     isicsd=dataset['perturbation'].map(lambda x: x=='icsd')
     isproto=dataset['metadata'].map(lambda x: 'proto' in x.keys() and x['proto']==protoname)
     data=dataset[isfinal&isicsd&isproto]
     index=data['ase_atoms'].keys()[0]
-    return data.loc[index][which]/len(data.loc[index]['ase_atoms'])
+    return data.loc[index][key]/len(data.loc[index]['ase_atoms'])
 
-def get_pathway_data(data_collection:pd.DataFrame,pathwaylabel):
+def get_pathway_data(data_collection:pd.DataFrame,pathwaylabel:str):
     '''
     get pathway data in a pandas dataframe
     '''
