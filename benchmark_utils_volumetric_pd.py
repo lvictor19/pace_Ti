@@ -6,7 +6,7 @@ from plotting_settings import colors,markers,renaming
 
 def get_pert_data(data_collection:pd.DataFrame,pertname):
     '''
-    get the strain data
+    get the data for a perturbation
     '''
     ispert=data_collection['perturbation'].map(lambda x: x==pertname)
     isfinal=data_collection['calc'].map(lambda x: x=='final')
@@ -15,7 +15,7 @@ def get_pert_data(data_collection:pd.DataFrame,pertname):
 
 def get_proto_data(data_collection:pd.DataFrame,pertname,protoname):
     '''
-    get the strain data for a prototype
+    get the data for a prototype
     '''
     if not data_collection['perturbation'].eq(pertname).all():
         raise ValueError('Perturbation of input data not all strain for getting strain data belonging to a prototype')
