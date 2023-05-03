@@ -3,36 +3,7 @@ from matplotlib import pyplot as plt
 import pandas as pd
 import os
 from plotting_settings import colors,markers
-
-def get_pert_data(data_collection:pd.DataFrame,pertname):
-    '''
-    get the strain data
-    '''
-    ispert=data_collection['perturbation'].map(lambda x: x==pertname)
-    isfinal=data_collection['calc'].map(lambda x: x=='final')
-    pert_data=data_collection[ispert&isfinal].copy()
-    return pert_data
-
-def get_proto_data(data_collection:pd.DataFrame,pertname,protoname):
-    '''
-    get the strain data for a prototype
-    '''
-    if not data_collection['perturbation'].eq(pertname).all():
-        raise ValueError('Perturbation of input data not all strain for getting strain data belonging to a prototype')
-    isproto=data_collection["metadata"].map(lambda x: x["proto"]==protoname)
-    strain_data=data_collection[isproto].copy()
-    return strain_data
-
-def get_icsd_ref_energy(dataset:pd.DataFrame,protoname:str,which)->float:
-    '''
-    get the reference energy per atom for a prototype
-    '''
-    isfinal=dataset['calc'].map(lambda x: x=='final')
-    isicsd=dataset['perturbation'].map(lambda x: x=='icsd')
-    isproto=dataset['metadata'].map(lambda x: 'proto' in x.keys() and x['proto']==protoname)
-    data=dataset[isfinal&isicsd&isproto]
-    index=data['ase_atoms'].keys()[0]
-    return data.loc[index][which]/len(data.loc[index]['ase_atoms'])
+from general import get_pert_data, get_proto_data, get_icsd_ref_energy
 
 def strain(data_collection: pd.DataFrame):
     """

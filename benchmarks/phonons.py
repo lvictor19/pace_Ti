@@ -7,15 +7,8 @@ from phonopy import Phonopy
 from phonopy.structure.atoms import PhonopyAtoms
 from pymatgen.io.phonopy import get_pmg_structure, get_phonopy_structure
 from phonopy.phonon.band_structure import get_band_qpoints_and_path_connections
+from general import get_pert_data
 
-def get_pert_data(data_collection:pd.DataFrame,pertname):
-    '''
-    get the strain data
-    '''
-    ispert=data_collection['perturbation'].map(lambda x: x==pertname)
-    isfinal=data_collection['calc'].map(lambda x: x=='final')
-    pert_data=data_collection[ispert&isfinal].copy()
-    return pert_data
 
 def calculate_phonons_pd(calc_df: pd.DataFrame,key) -> Phonopy:
 

@@ -2,30 +2,9 @@ import numpy as np
 import json
 import pandas as pd
 from matplotlib import pyplot as plt
+from general import get_icsd_ref_energy,reference_energies,get_pathway_data
 import scienceplots
 
-def get_icsd_ref_energy(dataset:pd.DataFrame,protoname:str,key:str)->float:
-    '''
-    get the reference energy per atom for a prototype
-    key : str 
-        key in the dataframe
-    '''
-    isfinal=dataset['calc'].map(lambda x: x=='final')
-    isicsd=dataset['perturbation'].map(lambda x: x=='icsd')
-    isproto=dataset['metadata'].map(lambda x: 'proto' in x.keys() and x['proto']==protoname)
-    data=dataset[isfinal&isicsd&isproto]
-    index=data['ase_atoms'].keys()[0]
-    return data.loc[index][key]/len(data.loc[index]['ase_atoms'])
-
-def get_pathway_data(data_collection:pd.DataFrame,pathwaylabel:str):
-    '''
-    get pathway data in a pandas dataframe
-    '''
-    ispathway=data_collection['perturbation'].map(lambda x: x=='pathways')
-    isfinal=data_collection['calc'].map(lambda x: x=='final')
-    isBurgers_Bain=data_collection['metadata'].map(lambda x: 'pathway_label' in x.keys() and x['pathway_label']==pathwaylabel)
-    Burgers_Bain_data=data_collection[ispathway&isfinal&isBurgers_Bain].copy()
-    return Burgers_Bain_data
 
 def split_Burgers_Bain_path(data_collection:pd.DataFrame):
     '''
@@ -53,13 +32,7 @@ def sort_list(sorting_list,*lists):
     for list in lists:
         yield np.array(list)[sorting_index].tolist()
 
-def reference_energies(data_collection:pd.DataFrame,reference_energies:dict):
-    '''
-    reference the energies in a dataframe according to a list of reference energies
-    '''
-    for ref_e in reference_energies.keys():
-        data_collection[ref_e]=data_collection[ref_e]/data_collection['ase_atoms'].map(lambda x:len(x))-reference_energies[ref_e]
-    return data_collection
+
 
 def plot_burgers_bain(ax,shuffled_referenced:pd.DataFrame,unshuffled_referenced:pd.DataFrame,key):
     '''
