@@ -3,7 +3,7 @@ import json
 import pandas as pd
 from matplotlib import pyplot as plt
 import scienceplots
-from general import get_icsd_ref_energy, get_pathway_data, reference_energies,scatter_data,plot_data
+from .general import get_icsd_ref_energy, get_pathway_data, reference_energies,scatter_data,plot_data
 
 
 def benchmark_bcc_omega_pathway(data_collection: pd.DataFrame):
@@ -22,7 +22,6 @@ def benchmark_bcc_omega_pathway(data_collection: pd.DataFrame):
     values = values[index]
     Energies_dft = Energies_dft[index]
     ref_omega_dft=get_icsd_ref_energy(data_collection,'omega','energy')
-    print(keys)
     for key in keys:
         Energies_pace=np.array(bcc_omega_data[key])/Natom
         Energies_pace = Energies_pace[index]

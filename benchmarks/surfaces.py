@@ -2,7 +2,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 import numpy as np
 from pandas.plotting import table
-from general import get_pert_data, get_icsd_ref_energy, gentable
+from .general import get_pert_data, get_icsd_ref_energy, gentable
 
 def savetable(data: dict, name: str, dpi: int):
     """
@@ -17,7 +17,7 @@ def savetable(data: dict, name: str, dpi: int):
     table(ax, df, loc="center")
     plt.savefig(name, dpi=dpi)
 
-def surface(data_collection: pd.DataFrame):
+def surfaces(data_collection: pd.DataFrame):
     """
     Surface boundary energy analysis
     input data_collection::list
@@ -53,3 +53,4 @@ def surface(data_collection: pd.DataFrame):
         ax = fig.add_subplot(111, frame_on=False)
         ax=gentable(ax,df)
         plt.savefig("Surfaces/Surfaces_s{0}.png".format(key.split('_')[-1]), dpi=200)
+        plt.close()

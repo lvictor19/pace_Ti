@@ -69,5 +69,5 @@ def scatter_data(ax,Energies_dft:np.ndarray,x=None,**kwargs):
 def plot_data(ax,Energies_pace:np.ndarray,x=None,**kwargs):
     if x==None:
         x=np.arange(len(Energies_pace))
-    ax.scatter(np.arange(len(Energies_pace)),Energies_pace,**kwargs)
+    ax.plot(np.arange(len(Energies_pace)),Energies_pace,**kwargs)
     return ax

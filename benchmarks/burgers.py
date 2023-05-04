@@ -2,7 +2,7 @@ import numpy as np
 import json
 import pandas as pd
 from matplotlib import pyplot as plt
-from general import get_icsd_ref_energy,reference_energies,get_pathway_data
+from .general import get_icsd_ref_energy,reference_energies,get_pathway_data
 import scienceplots
 
 
@@ -16,23 +16,6 @@ def split_Burgers_Bain_path(data_collection:pd.DataFrame):
     BBunshuffled=data_collection[isnotshuffled]
 
     return BBshuffled,BBunshuffled
-
-def sort_list(sorting_list,*lists):
-    '''
-    sort *lists with sorting index identical to sorting the sorting_list
-    '''
-    for list in lists:
-        assert len(sorting_list)==len(list)
-
-    sorting_list=np.array(sorting_list)
-    sorting_index=np.argsort(sorting_list)
-
-    sorted_list=sorting_list[sorting_index].tolist()
-    yield sorted_list
-    for list in lists:
-        yield np.array(list)[sorting_index].tolist()
-
-
 
 def plot_burgers_bain(ax,shuffled_referenced:pd.DataFrame,unshuffled_referenced:pd.DataFrame,key):
     '''

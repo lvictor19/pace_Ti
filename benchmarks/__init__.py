@@ -8,4 +8,4 @@ from . import phonons
 from . import surfaces
 from . import vacancies
 from . import volumetric
-from general import *
+from .general import *

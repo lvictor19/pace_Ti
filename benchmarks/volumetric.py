@@ -2,10 +2,10 @@ import numpy as np
 from matplotlib import pyplot as plt
 import pandas as pd
 import os
-from plotting_settings import colors,markers,renaming
-from general import get_pert_data,get_proto_data,get_icsd_ref_energy
+from .plotting_settings import colors,markers,renaming
+from .general import get_pert_data,get_proto_data,get_icsd_ref_energy
 
-def volumetric_deformation_df(data_collection: pd.DataFrame):
+def volumetric_deformation(data_collection: pd.DataFrame):
     """
     Volumetric deformation energy analysis
     input data_collection::pd.DataFrame
@@ -15,7 +15,6 @@ def volumetric_deformation_df(data_collection: pd.DataFrame):
     protos=set(volumetric_data['metadata'].map(lambda x: x['proto']))
     keys=list(volumetric_data.keys())
     keys=[x for x in keys if x.startswith('pace_energy')]
-    print(protos)
     for key in keys:
         ref_omega_pace=get_icsd_ref_energy(data_collection,'omega',key)
         i=0

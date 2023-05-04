@@ -2,8 +2,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 import numpy as np
 from pandas.plotting import table
-from general import get_pert_data,get_icsd_ref_energy,gentable
-
+from .general import get_pert_data,get_icsd_ref_energy,gentable
 
     
 def grain_boundary(data_collection: pd.DataFrame):

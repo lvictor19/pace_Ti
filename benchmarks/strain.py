@@ -2,8 +2,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 import pandas as pd
 import os
-from plotting_settings import colors,markers
-from general import get_pert_data, get_proto_data, get_icsd_ref_energy
+from .plotting_settings import colors,markers
+from .general import get_pert_data, get_proto_data, get_icsd_ref_energy
 
 def strain(data_collection: pd.DataFrame):
     """

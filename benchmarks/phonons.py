@@ -2,12 +2,12 @@ import numpy as np
 from matplotlib import pyplot as plt
 import pandas as pd
 import os
-from plotting_settings import colors,markers
+from .plotting_settings import colors,markers
 from phonopy import Phonopy
 from phonopy.structure.atoms import PhonopyAtoms
 from pymatgen.io.phonopy import get_pmg_structure, get_phonopy_structure
 from phonopy.phonon.band_structure import get_band_qpoints_and_path_connections
-from general import get_pert_data
+from .general import get_pert_data
 
 
 def calculate_phonons_pd(calc_df: pd.DataFrame,key) -> Phonopy:
@@ -45,6 +45,7 @@ def phonons(data_collection: list):
                 ax.get_lines()[line_idx].set_color("black")
         band_fig.gcf().axes[0].set_ylabel(r"Frequency (THz)", fontsize=14.0)
         band_fig.savefig(os.path.join("Phonons","phonon_{0}.png".format(proto)), transparent=True)
+        plt.close()
 
         for key in keys:
             proto_df=phonon_data[phonon_data['metadata'].map(lambda x: x['proto'])==proto]
@@ -56,3 +57,4 @@ def phonons(data_collection: list):
                     ax.get_lines()[line_idx].set_color("black")
             band_fig.gcf().axes[0].set_ylabel(r"Frequency (THz)", fontsize=14.0)
             band_fig.savefig(os.path.join("Phonons","phonon_{0}_s{1}.png".format(proto,key.split('_')[-1])), transparent=True)
+            plt.close()

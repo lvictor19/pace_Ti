@@ -3,7 +3,7 @@ import json
 import pandas as pd
 from matplotlib import pyplot as plt
 import scienceplots
-from general import get_pathway_data,get_icsd_ref_energy,scatter_data,plot_data
+from .general import get_pathway_data,get_icsd_ref_energy,scatter_data,plot_data
 
 def split_hcp_omega_path(data_collection:pd.DataFrame):
     '''

@@ -2,8 +2,8 @@ import pandas as pd
 from matplotlib import pyplot as plt
 import numpy as np
 from pandas.plotting import table
-from plotting_settings import colors,markers,renaming
-from general import get_pert_data,get_proto_data,gentable
+from .plotting_settings import colors,markers,renaming
+from .general import get_pert_data,get_proto_data,gentable
 
 def loc_proto_ideal(vacancy_data:pd.DataFrame,vacancy_ideal:pd.DataFrame):
     '''
@@ -12,12 +12,9 @@ def loc_proto_ideal(vacancy_data:pd.DataFrame,vacancy_ideal:pd.DataFrame):
     locs=[]
     for index,row in vacancy_data.iterrows():
         proto=row['metadata']['proto']
-        print(proto)
         for i,r in vacancy_ideal.iterrows():
-            #  print(r['metadata']['proto'])
              if r['metadata']['proto']==proto:
                   locs.append(i)
-    print(locs)
     return locs
 
 def vacancy_formation(data_collection: pd.DataFrame):
@@ -37,7 +34,7 @@ def vacancy_formation(data_collection: pd.DataFrame):
         discrepancies_collect=[]
         protos_=[]
         for proto in protos:
-            if proto in []:#['casi-alth_3','mp-865373POSCAR']:
+            if proto in ['casi-alth_3','mp-865373POSCAR']:
                 continue
             else:
                 protos_.append(proto)
@@ -70,3 +67,4 @@ def vacancy_formation(data_collection: pd.DataFrame):
         ax = fig.add_subplot(111, frame_on=False)
         ax=gentable(ax,df)
         plt.savefig("Vacancies/Vacancy_formation_s{0}.png".format(key.split('_')[-1]), dpi=200)
+        plt.close()
