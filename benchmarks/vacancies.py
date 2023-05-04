@@ -38,7 +38,7 @@ def vacancy_formation(data_collection: pd.DataFrame):
                 continue
             else:
                 protos_.append(proto)
-            vacancy_proto_data=get_proto_data(vacancy_data,'vacancies',proto)
+            vacancy_proto_data=get_proto_data(vacancy_data,proto)
             locs=loc_proto_ideal(vacancy_proto_data,vacancy_ideal)
             Evac=np.array(vacancy_proto_data['energy'])
             Eideal=np.array([vacancy_ideal.loc[i]['energy'] for i in locs])

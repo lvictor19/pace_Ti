@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from pandas.plotting import table
 
-def get_icsd_ref_energy(dataset:pd.DataFrame,protoname:str,which)->float:
+def get_icsd_ref_energy(dataset:pd.DataFrame,protoname:str,key:str)->float:
     '''
     get the reference energy per atom for a prototype
     '''
@@ -11,31 +11,42 @@ def get_icsd_ref_energy(dataset:pd.DataFrame,protoname:str,which)->float:
     isproto=dataset['metadata'].map(lambda x: 'proto' in x.keys() and x['proto']==protoname)
     data=dataset[isfinal&isicsd&isproto]
     index=data['ase_atoms'].keys()[0]
-    return data.loc[index][which]/len(data.loc[index]['ase_atoms'])
+    return data.loc[index][key]/len(data.loc[index]['ase_atoms'])
 
 def reference_energies(data_collection:pd.DataFrame,reference_energies:dict):
     '''
     reference the energies in a dataframe according to a list of reference energies
     '''
     for ref_e in reference_energies.keys():
-        data_collection[ref_e]=data_collection[ref_e]/data_collection['ase_atoms'].map(lambda x:len(x))-reference_energies[ref_e]
+        data_collection[ref_e]=data_collection[ref_e]-data_collection['ase_atoms'].map(lambda x:len(x))*reference_energies[ref_e]
     return data_collection
 
-def get_pert_data(data_collection:pd.DataFrame,pertname):
+def get_pert_data(data_collection:pd.DataFrame,pertname:str,is_final=True):
     '''
-    get the strain data
+    get the data for a perturbation
     '''
     ispert=data_collection['perturbation'].map(lambda x: x==pertname)
-    isfinal=data_collection['calc'].map(lambda x: x=='final')
+    if is_final:
+        isfinal=data_collection['calc'].map(lambda x: x=='final')
+    else:
+        isfinal=data_collection['calc'].map(lambda x: True)
     pert_data=data_collection[ispert&isfinal].copy()
     return pert_data
 
-def get_proto_data(data_collection:pd.DataFrame,pertname,protoname):
+def unroll_pathway_metadata(data_collection:pd.DataFrame):
     '''
-    get the strain data for a prototype
+    unroll metadata and write in the dataframe in seperate columns
     '''
-    if not data_collection['perturbation'].eq(pertname).all():
-        raise ValueError('Perturbation of input data not all strain for getting strain data belonging to a prototype')
+    if not data_collection['perturbation'].eq('pathways').all():
+        raise ValueError('Perturbations of input data are not all pathways')
+    for key in data_collection.iloc[0]['metadata']:
+        data_collection[key]=data_collection['metadata'].map(lambda x: x[key])
+    return data_collection
+
+def get_proto_data(data_collection:pd.DataFrame,protoname):
+    '''
+    get the data for a prototype
+    '''
     isproto=data_collection["metadata"].map(lambda x: x["proto"]==protoname)
     strain_data=data_collection[isproto].copy()
     return strain_data
@@ -46,9 +57,9 @@ def get_pathway_data(data_collection:pd.DataFrame,pathwaylabel):
     '''
     ispathway=data_collection['perturbation'].map(lambda x: x=='pathways')
     isfinal=data_collection['calc'].map(lambda x: x=='final')
-    isBurgers_Bain=data_collection['metadata'].map(lambda x: 'pathway_label' in x.keys() and x['pathway_label']==pathwaylabel)
-    Burgers_Bain_data=data_collection[ispathway&isfinal&isBurgers_Bain].copy()
-    return Burgers_Bain_data
+    ispathway=data_collection['metadata'].map(lambda x: 'pathway_label' in x.keys() and x['pathway_label']==pathwaylabel)
+    pathway_data=data_collection[ispathway&isfinal&ispathway].copy()
+    return pathway_data
 
 def gentable(ax,data: dict):
     """
@@ -60,14 +71,14 @@ def gentable(ax,data: dict):
     ax=table(ax, data, loc="center")
     return ax
 
-def scatter_data(ax,Energies_dft:np.ndarray,x=None,**kwargs):
-    if x==None:
-        x=np.arange(len(Energies_dft))
-    ax.scatter(np.arange(len(Energies_dft)),Energies_dft,**kwargs)
-    return ax
-
-def plot_data(ax,Energies_pace:np.ndarray,x=None,**kwargs):
-    if x==None:
-        x=np.arange(len(Energies_pace))
-    ax.plot(np.arange(len(Energies_pace)),Energies_pace,**kwargs)
+def plot_pathway_data(ax,plotlist):
+    '''
+    plot pathway data,plotlist contains tuples in which the entry is either 'scatter' or 'plot',
+    the second and third entries are the x-y values, the third entry is a dictionary of plotting args
+    '''
+    for plot in  plotlist:
+        if plot[0]=='scatter':
+            ax.scatter(plot[1],plot[2],**plot[3])
+        if plot[1]=='plot':
+            ax.plot(plot[1],plot[2],**plot[3])
     return ax

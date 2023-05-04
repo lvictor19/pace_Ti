@@ -2,7 +2,7 @@ import numpy as np
 import json
 import pandas as pd
 from matplotlib import pyplot as plt
-from .general import get_icsd_ref_energy,reference_energies,get_pathway_data
+from .general import get_icsd_ref_energy,reference_energies,get_pathway_data,unroll_pathway_metadata,plot_pathway_data
 import scienceplots
 
 
@@ -10,10 +10,8 @@ def split_Burgers_Bain_path(data_collection:pd.DataFrame):
     '''
     split Burgers_Bain path to shuffled and unshuffled
     '''
-    isshuffled=data_collection['metadata'].map(lambda x: 'shuffled' in x.keys() and x['shuffled']==True)
-    isnotshuffled=isshuffled.map(lambda x: not x)
-    BBshuffled=data_collection[isshuffled]
-    BBunshuffled=data_collection[isnotshuffled]
+    BBshuffled=data_collection[data_collection['pathway_number']==1]
+    BBunshuffled=data_collection[data_collection['pathway_number']==0]
 
     return BBshuffled,BBunshuffled
 
@@ -22,32 +20,21 @@ def plot_burgers_bain(ax,shuffled_referenced:pd.DataFrame,unshuffled_referenced:
     plot burger_bain pathway energy profile
     key : key in the dataframe for the pace energy
     '''
-    shuffled_referenced['value']=shuffled_referenced['metadata'].map(lambda x: x['value'])
-    unshuffled_referenced['value']=unshuffled_referenced['metadata'].map(lambda x: x['value'])
     shuffled_referenced.sort_values(by='value', inplace=True)
     unshuffled_referenced.sort_values(by='value', inplace=True)
-
-    ax.scatter(
-        shuffled_referenced['value'], shuffled_referenced['energy'], s=6, c="r", label="shuffled_dft"
-    )
-    ax.scatter(
-        unshuffled_referenced['value'],
-        unshuffled_referenced['energy'],
-        s=6,
-        c="b",
-        label="unshuffled_dft",
-    )
-    ax.plot(shuffled_referenced['value'], shuffled_referenced[key], c="r", label="shuffled_pace")
-    ax.plot(
-        unshuffled_referenced['value'],unshuffled_referenced[key], c="b", label="unshuffled_pace"
-    )
+    plotlists=[]
+    plotlists.append(('scatter',np.array(shuffled_referenced['value']),np.array(shuffled_referenced['energy'])/np.array(shuffled_referenced['ase_atoms'].map(lambda x:len(x))), {"s":6, "c":"r", "label":"shuffled_dft"}))
+    plotlists.append(('scatter',np.array(unshuffled_referenced['value']),np.array(unshuffled_referenced['energy'])/np.array(unshuffled_referenced['ase_atoms'].map(lambda x:len(x))), {"s":6, "c":"b", "label":"unshuffled_dft"}))
+    plotlists.append(('plot',np.array(shuffled_referenced['value']), np.array(shuffled_referenced[key])/np.array(shuffled_referenced['ase_atoms'].map(lambda x:len(x))), {"c":"r", "label":"shuffled_pace"}))
+    plotlists.append(('plot',np.array(unshuffled_referenced['value']),np.array(unshuffled_referenced[key])/np.array(unshuffled_referenced['ase_atoms'].map(lambda x:len(x))), {"c":"b", "label":"unshuffled_pace"}))
+    ax=plot_pathway_data(ax,plotlists)
     return ax
 
 def benchmark_bain_burgers_pathway(data_collection:pd.DataFrame):
     """
     analysis for Burger_Bains pathways connecting fcc-bcc-hcp
     """
-    Burgers_Bain_data=get_pathway_data(data_collection,'Burgers_Bain')
+    Burgers_Bain_data=unroll_pathway_metadata(get_pathway_data(data_collection,'Burgers_Bain'))
     bccref_dft=get_icsd_ref_energy(data_collection,'bcc','energy')
     keys=list(data_collection.keys())
     ref_dict={'energy':bccref_dft}

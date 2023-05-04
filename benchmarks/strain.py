@@ -20,7 +20,7 @@ def strain(data_collection: pd.DataFrame):
     keys=list(data_collection.keys())
     keys=[x for x in keys if x.startswith('pace_energy')]
     for proto in protos:
-        strain_proto_data=get_proto_data(strain_data,'strain',proto)
+        strain_proto_data=get_proto_data(strain_data,proto)
         Es=np.array(list(strain_proto_data['metadata'].map(lambda x : x['special_direction'])))
         groups = []
         already = np.zeros(len(Es))

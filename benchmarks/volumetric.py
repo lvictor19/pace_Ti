@@ -19,7 +19,7 @@ def volumetric_deformation(data_collection: pd.DataFrame):
         ref_omega_pace=get_icsd_ref_energy(data_collection,'omega',key)
         i=0
         for proto in protos:
-            proto_data=get_proto_data(volumetric_data,'volumetric',proto)
+            proto_data=get_proto_data(volumetric_data,proto)
             Natom=np.array(proto_data['ase_atoms'].map(lambda x: len(x)))
             Vs_=np.array(proto_data['metadata'].map(lambda x: x['volume']))/Natom
             Es_=np.array(proto_data['energy'])/Natom
