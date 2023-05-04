@@ -23,14 +23,13 @@ for statement in statements:
     except Exception:
         pass
 
-dataset=pd.read_pickle(glob.glob('always_include_*_*gzip')[0],compression='gzip')
-
-
+dataset=pd.read_pickle(glob.glob('all_perts*gzip')[0],compression='gzip')
+keys=list(dataset.keys())
+keys=[x for x in keys if x.startswith('pace_energy')]
 ##############Burgers#################
 print("Working on Burgers_Bain")
 shuffled_referenced,unshuffled_referenced=benchmarks.burgers.benchmark_bain_burgers_pathway(dataset)
-keys=list(shuffled_referenced.keys())
-for key in [x for x in keys if x.startswith('pace_energy')]:
+for key in keys:
     with plt.style.context("science"):
         fig=plt.figure(figsize=(5, 4))
         ax=fig.add_subplot(111)
@@ -39,7 +38,7 @@ for key in [x for x in keys if x.startswith('pace_energy')]:
         ax.set_ylabel(r"$\Delta E \enspace (eV/atom)$")
         ax.tick_params(axis='both', which='both', direction='in')
         plt.legend()
-        plt.savefig("Burgers/Ti_Burgers_strain"+"s"+key.split('_')[-1]+".png")
+        plt.savefig("Burgers/Ti_Burgers_strains{0}.png".format(key.split('_')[-1]+".png"))
         plt.close()
 
 ##############hcp_omega################
@@ -48,7 +47,19 @@ benchmarks.hcpomega.benchmark_hcp_omega_pathway(dataset)
 
 ##############omega#################
 print("Working on bcc_omega")
-benchmarks.omega.benchmark_bcc_omega_pathway(dataset)
+bcc_omega_data=benchmarks.omega.benchmark_bcc_omega_pathway(dataset)
+for key in keys:
+    with plt.style.context("science"):
+        fig=plt.figure(figsize=(5, 4))
+        ax=fig.add_subplot(111)
+        ax=benchmarks.omega.plot_omega(ax,bcc_omega_data,key)
+        ax.set_xlabel("Omega Transformation")
+        ax.set_ylabel(r"$\Delta E \enspace (eV/atom)$")
+        ax.tick_params(axis='both', which='both', direction='in')
+        ax.set_xticks([0,0.167],['bcc','omega'])
+        plt.legend()
+        plt.savefig("Omega/Omegas{0}.png".format(key.split('_')[-1]))
+        plt.close()
 
 ##############phonons#################
 print("Working on phonons")
@@ -65,7 +76,6 @@ benchmarks.strain.strain(dataset)
 
 ##############gb#################
 print("Working on grain boundaries")
-dataset=pd.read_pickle(glob.glob('all_perts*gzip')[0],compression='gzip')
 benchmarks.gb.grain_boundary(dataset)
 
 ##############surfaces#################
