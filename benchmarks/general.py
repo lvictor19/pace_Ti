@@ -79,6 +79,6 @@ def plot_pathway_data(ax,plotlist):
     for plot in  plotlist:
         if plot[0]=='scatter':
             ax.scatter(plot[1],plot[2],**plot[3])
-        if plot[1]=='plot':
+        if plot[0]=='plot':
             ax.plot(plot[1],plot[2],**plot[3])
     return ax

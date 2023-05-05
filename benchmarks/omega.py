@@ -3,7 +3,7 @@ import json
 import pandas as pd
 from matplotlib import pyplot as plt
 import scienceplots
-from .general import get_icsd_ref_energy, get_pathway_data, reference_energies,scatter_data,plot_data,unroll_pathway_metadata,plot_pathway_data
+from .general import get_icsd_ref_energy, get_pathway_data, reference_energies,unroll_pathway_metadata,plot_pathway_data
 
 
 def plot_omega(ax,bcc_omega_data:pd.DataFrame,key):
@@ -32,4 +32,5 @@ def benchmark_bcc_omega_pathway(data_collection: pd.DataFrame):
         omegaref_pace=get_icsd_ref_energy(data_collection,'omega',key)
         ref_dict[key]=omegaref_pace
     bcc_omega_data=reference_energies(bcc_omega_data,ref_dict)
+    
     return bcc_omega_data
