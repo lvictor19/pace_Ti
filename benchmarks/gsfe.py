@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 import json
 import pandas as pd
 import os
+from .general import get_pert_data
 
 
 def in_plane_vectors(record):
@@ -95,7 +96,8 @@ def plotlinescan(datapace: np.ndarray, datadft: np.ndarray, name: str, axisname:
         plt.savefig(os.path.join('linescan',name))
         plt.close()
 
-def gsfe(data_collection: pd.DataFrame):
+def gsfe(dataset: pd.DataFrame):
+    data_collection=get_pert_data(dataset,'gsfe')
     faces = ["bcc100", "bcc110", "fcc100", "fcc111", "basal", "prismatic", "pyramidal","pyramidal2nd"]
     protos = ["bcc", "bcc", "fcc", "fcc", "hcp", "hcp", "hcp","hcp"]
     planes = ["100", "110", "100", "111", "basal", "prismatic", "pyramidal","pyramidal2nd"]
