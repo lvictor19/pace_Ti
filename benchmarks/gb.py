@@ -25,7 +25,7 @@ def get_deltaE(row,data_collection,key):
     E_gb=row[key]
     ref_elem=row['metadata']['ref_elem']
     ref_proto_dict={"Mo":"bcc","Ti":"hcp"}
-    proto=ref_proto_dict[ref_elem]['ref_elem']
+    proto=ref_proto_dict[ref_elem]
     E_icsd=get_icsd_ref_energy(data_collection,proto,'energy')
     deltaE=(E_gb - E_icsd * N_gb ) / 2 / A
     return deltaE
