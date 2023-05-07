@@ -34,10 +34,10 @@ def vacancy_formation(data_collection: pd.DataFrame):
         discrepancies_collect=[]
         protos_=[]
         for proto in protos:
-            if proto in ['casi-alth_3','mp-865373POSCAR']:
-                continue
-            else:
-                protos_.append(proto)
+            # if proto in ['casi-alth_3','mp-865373POSCAR']:
+            #     continue
+            # else:
+            protos_.append(proto)
             vacancy_proto_data=get_proto_data(vacancy_data,proto)
             locs=loc_proto_ideal(vacancy_proto_data,vacancy_ideal)
             Evac=np.array(vacancy_proto_data['energy'])

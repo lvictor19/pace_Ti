@@ -2,24 +2,12 @@ import pandas as pd
 from matplotlib import pyplot as plt
 import numpy as np
 from pandas.plotting import table
-from .general import get_pert_data,get_icsd_ref_energy_multiple,gentable
+from .general import get_pert_data,get_icsd_ref_energy_multiple,gentable,get_number_of_atoms,get_area
 
 
 def grain_boundary(dataset: pd.DataFrame):
     gb_data=get_pert_data(dataset,'gb')
     return gb_data
-
-def get_E_gb(gb_data: pd.DataFrame,key:str):
-    '''
-    get grain boudary energy
-    '''
-    return np.array(gb_data[key])
-
-def get_N_gb(gb_data: pd.DataFrame):
-    '''
-    get number of atoms in cell
-    '''
-    return np.array(gb_data["ase_atoms"].map(lambda x: len(x)))
 
 
 def get_area(gb_data:pd.DataFrame):
@@ -39,9 +27,9 @@ def analysis(gb_data:pd.DataFrame,dataset:pd.DataFrame,key):
     planes=gb_data["metadata"].map(lambda x: x['plane'])
     sigmas=gb_data["metadata"].map(lambda x: x['sigma'])
 
-    E_gb_dft=get_E_gb(gb_data,'energy')
-    E_gb_pred=get_E_gb(gb_data,key)
-    N_gb = get_N_gb(gb_data)
+    E_gb_dft=gb_data['energy']
+    E_gb_pred=gb_data[key]
+    N_gb = get_number_of_atoms(gb_data)
     E_icsd = np.array(get_icsd_ref_energy_multiple(dataset,protos,'energy'))
     E_icsd_pred = np.array(get_icsd_ref_energy_multiple(dataset,protos,key))
     area=get_area(gb_data)

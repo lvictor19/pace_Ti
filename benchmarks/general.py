@@ -13,6 +13,12 @@ def get_icsd_ref_energy(dataset:pd.DataFrame,protoname:str,key:str)->float:
     index=data['ase_atoms'].keys()[0]
     return data.loc[index][key]/len(data.loc[index]['ase_atoms'])
 
+def get_number_of_atoms(dataset: pd.DataFrame):
+    '''
+    get number of atoms in cell
+    '''
+    return dataset["ase_atoms"].map(lambda x: len(x))
+
 def get_icsd_ref_energy_multiple(dataset:pd.DataFrame,protonames:pd.Series,key:str)->pd.Series:
     '''
     get the reference energy per atom for a prototype
@@ -22,11 +28,19 @@ def get_icsd_ref_energy_multiple(dataset:pd.DataFrame,protonames:pd.Series,key:s
     data=dataset[isfinal&isicsd]
     data['proto']=data['metadata'].map(lambda x: x['proto'])
     filtered_df = data[data['proto'].isin(protonames)]
-    if not filtered_df.shape[0]==len(protonames):
-        raise ValueError("multiple icsd final calc for one proto")
+    print(protonames)
     ordered_df = protonames.to_frame(name='proto').merge(data, on='proto', how='left')
+    print(ordered_df)
     return ordered_df[key]/ordered_df['ase_atoms'].map(lambda x: len(x))
 
+def get_area(dataset:pd.DataFrame):
+    '''
+    get area
+    '''
+    lattice_a=list(dataset["ase_atoms"].map(lambda x: x.cell[0]))
+    lattice_b=list(dataset["ase_atoms"].map(lambda x: x.cell[1]))
+    area=np.linalg.norm(np.cross(np.array(lattice_a),np.array(lattice_b),axisa=1,axisb=1),axis=1)
+    return area
 
 def reference_energies(data_collection:pd.DataFrame,reference_energies:dict):
     '''
