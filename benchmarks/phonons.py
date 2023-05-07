@@ -27,34 +27,20 @@ def calculate_phonons_pd(calc_df: pd.DataFrame,key) -> Phonopy:
     phonon.produce_force_constants()
     return phonon
 
-def phonons(data_collection: list):
+def phonons(data_collection: pd.DataFrame):
     """
     analysis for the phonon dispersion curves
     """
     phonon_data=get_pert_data(data_collection,'phonons')
-    protos=set(phonon_data['metadata'].map(lambda x: x['proto']))
-    keys=list(phonon_data.keys())
-    keys=[x for x in keys if x.startswith('pace_forces')]
-    for proto in protos:
-        proto_df=phonon_data[phonon_data['metadata'].map(lambda x: x['proto'])==proto]
-        phonon=calculate_phonons_pd(proto_df,key='forces')
-        band_fig = phonon.auto_band_structure(plot=True)
-        for ax in band_fig.gcf().axes:
-            ax.tick_params(axis="both", labelsize=12.0)
-            for line_idx in range(len(ax.get_lines())):
-                ax.get_lines()[line_idx].set_color("black")
-        band_fig.gcf().axes[0].set_ylabel(r"Frequency (THz)", fontsize=14.0)
-        band_fig.savefig(os.path.join("Phonons","phonon_{0}.png".format(proto)), transparent=True)
-        plt.close()
+    return phonon_data
 
-        for key in keys:
-            proto_df=phonon_data[phonon_data['metadata'].map(lambda x: x['proto'])==proto]
-            phonon=calculate_phonons_pd(proto_df,key=key)
-            band_fig = phonon.auto_band_structure(plot=True)
-            for ax in band_fig.gcf().axes:
-                ax.tick_params(axis="both", labelsize=12.0)
-                for line_idx in range(len(ax.get_lines())):
-                    ax.get_lines()[line_idx].set_color("black")
-            band_fig.gcf().axes[0].set_ylabel(r"Frequency (THz)", fontsize=14.0)
-            band_fig.savefig(os.path.join("Phonons","phonon_{0}_s{1}.png".format(proto,key.split('_')[-1])), transparent=True)
-            plt.close()
+def analysis(phonon_data:pd.DataFrame,proto:str,key:str):
+    proto_df=phonon_data[phonon_data['metadata'].map(lambda x: x['proto'])==proto]
+    phonon=calculate_phonons_pd(proto_df,key=key)
+    band_fig = phonon.auto_band_structure(plot=True)
+    for ax in band_fig.gcf().axes:
+        ax.tick_params(axis="both", labelsize=12.0)
+        for line_idx in range(len(ax.get_lines())):
+            ax.get_lines()[line_idx].set_color("black")
+    band_fig.gcf().axes[0].set_ylabel(r"Frequency (THz)", fontsize=14.0)
+    return band_fig

@@ -2,58 +2,60 @@ import pandas as pd
 from matplotlib import pyplot as plt
 import numpy as np
 from pandas.plotting import table
-from .general import get_pert_data,get_icsd_ref_energy,gentable
+from .general import get_pert_data,get_icsd_ref_energy_multiple,gentable
 
 
-def grain_boundary(data_collection: pd.DataFrame):
-    """
-    Grain boundary energy analysis
-    input data_collection::list
-    output a picture of the table of the grain boundary energies
-    """
-    gb_data=get_pert_data(data_collection,'gb')
+def grain_boundary(dataset: pd.DataFrame):
+    gb_data=get_pert_data(dataset,'gb')
     return gb_data
 
-def get_deltaE(row,data_collection,key):
+def get_E_gb(gb_data: pd.DataFrame,key:str):
     '''
-    get grain boundary energy
+    get grain boudary energy
     '''
-    a=row["ase_atoms"].cell[0]
-    b=row["ase_atoms"].cell[1]
-    N_gb=len(row["ase_atoms"])
-    A = np.linalg.norm(np.cross(a,b))
-    E_gb=row[key]
-    ref_elem=row['metadata']['ref_elem']
-    ref_proto_dict={"Mo":"bcc","Ti":"hcp"}
-    proto=ref_proto_dict[ref_elem]
-    E_icsd=get_icsd_ref_energy(data_collection,proto,'energy')
-    deltaE=(E_gb - E_icsd * N_gb ) / 2 / A
-    return deltaE
+    return np.array(gb_data[key])
 
-def analysis(gb_data:pd.DataFrame,data_collection:pd.DataFrame,key):
+def get_N_gb(gb_data: pd.DataFrame):
+    '''
+    get number of atoms in cell
+    '''
+    return np.array(gb_data["ase_atoms"].map(lambda x: len(x)))
+
+
+def get_area(gb_data:pd.DataFrame):
+    '''
+    get area
+    '''
+    lattice_a=list(gb_data["ase_atoms"].map(lambda x: x.cell[0]))
+    lattice_b=list(gb_data["ase_atoms"].map(lambda x: x.cell[1]))
+    area=np.linalg.norm(np.cross(np.array(lattice_a),np.array(lattice_b),axisa=1,axisb=1),axis=1)
+    return area
+
+def analysis(gb_data:pd.DataFrame,dataset:pd.DataFrame,key):
     '''
     grain boudary data analysis
     '''
-    ref_elem=gb_data['metadata'].map(lambda x: x['ref_elem'])
-    ref_proto_dict={"Mo":"bcc","Ti":"hcp"}
-    protos=[ref_proto_dict[elem] for elem in ref_elem]
+    protos=gb_data["metadata"].map(lambda x: x['proto'])
     planes=gb_data["metadata"].map(lambda x: x['plane'])
     sigmas=gb_data["metadata"].map(lambda x: x['sigma'])
 
-    gb_data['deltaE_gb']=gb_data.apply(lambda x: get_deltaE(x,data_collection,'energy'),axis=1)
-    gb_data['deltaEpred_gb']=gb_data.apply(lambda x: get_deltaE(x,data_collection,key),axis=1)
-
-    Edft=np.array(gb_data['deltaE_gb'])
-    Epred=np.array(gb_data['deltaEpred_gb'])
-
-    discrepancy = abs((Epred - Edft) / Edft) > 0.15
+    E_gb_dft=get_E_gb(gb_data,'energy')
+    E_gb_pred=get_E_gb(gb_data,key)
+    N_gb = get_N_gb(gb_data)
+    E_icsd = np.array(get_icsd_ref_energy_multiple(dataset,protos,'energy'))
+    E_icsd_pred = np.array(get_icsd_ref_energy_multiple(dataset,protos,key))
+    area=get_area(gb_data)
+    deltaE_gb = (E_gb_dft - np.array(E_icsd) * N_gb ) / 2 / area
+    deltaEpred_gb = (E_gb_pred - np.array(E_icsd_pred) * N_gb ) / 2 / area
+    discrepancy = abs((deltaEpred_gb - deltaE_gb) / deltaE_gb) > 0.15
     charlist=['+' if value else '' for value in discrepancy]
+
     d = {
         "proto": protos,
         "plane": planes,
         "sigma": sigmas,
-        r"$E^{DFT}(eV/Å^{2})$": np.round(Edft, 3),
-        r"$E^{pred}(eV/Å^{2})$": np.round(Epred, 3),
+        r"$E^{DFT}(eV/Å^{2})$": np.round(deltaE_gb, 5),
+        r"$E^{pred}(eV/Å^{2})$": np.round(deltaEpred_gb, 5),
         "discrepancy": charlist,
     }
     df = pd.DataFrame(data=d)

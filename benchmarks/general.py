@@ -13,6 +13,21 @@ def get_icsd_ref_energy(dataset:pd.DataFrame,protoname:str,key:str)->float:
     index=data['ase_atoms'].keys()[0]
     return data.loc[index][key]/len(data.loc[index]['ase_atoms'])
 
+def get_icsd_ref_energy_multiple(dataset:pd.DataFrame,protonames:pd.Series,key:str)->pd.Series:
+    '''
+    get the reference energy per atom for a prototype
+    '''
+    isfinal=dataset['calc'].map(lambda x: x=='final')
+    isicsd=dataset['perturbation'].map(lambda x: x=='icsd')
+    data=dataset[isfinal&isicsd]
+    data['proto']=data['metadata'].map(lambda x: x['proto'])
+    filtered_df = data[data['proto'].isin(protonames)]
+    if not filtered_df.shape[0]==len(protonames):
+        raise ValueError("multiple icsd final calc for one proto")
+    ordered_df = protonames.to_frame(name='proto').merge(data, on='proto', how='left')
+    return ordered_df[key]/ordered_df['ase_atoms'].map(lambda x: len(x))
+
+
 def reference_energies(data_collection:pd.DataFrame,reference_energies:dict):
     '''
     reference the energies in a dataframe according to a list of reference energies
